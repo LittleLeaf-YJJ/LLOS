@@ -1,6 +1,6 @@
-DebugConfig/
-DemoLLOS/
-RTE/
-*.22469
-*.uvoptx
-*.lst
+DebugConfig
+DemoLLOS
+RTE
+/*.22469
+/*.uvoptx
+/*.lst
