@@ -2,8 +2,8 @@
  * 独立按键驱动，支持无阻塞的任意按键点击次数、长按及长按时间检测， 支持按下/弹起双状态和多按键
  * 同时检测，默认低电平有效。
  * 作者: LittleLeaf All rights reserved
- * 版本: V1.0.2
- * 修订日期: 2024 12 14
+ * 版本: V2.0.0
+ * 修订日期: 2025/02/21
  * 基础使用步骤:
  * 1) 初始化调用LLOS_Key_Init
  * 2) 使用LLOS_Key_RegisterCB注册按键回调函数
@@ -21,26 +21,26 @@
 
 #define LL_KEYn(n)				LL_BV(n)
 
-typedef enum
+enum ll_keyEvent_t
 {
 	ll_key_event_NULL,
 	ll_key_event_Click,
 	ll_key_event_DoubleClick,
 	ll_key_event_TripleClick,
 	ll_key_event_LongPress,
-}ll_keyEvent_t;
+};
 
-typedef struct
+struct ll_keyConfig_t
 {
 	ll_IO_t port;		/* GPIO存储引脚输入状态的寄存器地址 */
 	uint32_t pinMask;	/* 使用到的Pin掩码 */
-}ll_keyConfig_t;
+};
 
 struct ll_keyWhich_t
 {
-	uint32_t pin;		/* 哪个按键 */
-	ll_keyEvent_t event;/* 按键事件(N击) */
-    uint16_t pressTime;	/* 长按事件的时间(ms) */
+	uint32_t pin;				/* 哪个按键 */
+	enum ll_keyEvent_t event;	/* 按键事件(N击) */
+    uint16_t pressTime;			/* 长按事件的时间(ms) */
 };
 
 /*====================================================================================
@@ -58,18 +58,14 @@ typedef void (*ll_keyCB_t)(uint8_t portN, bool isUp);
  * 参数:
  * 		ms: 毫秒，按键的轮询周期，一般为20
  *		timerN: 使用的OS定时器ID
+ *		keyNum: 最大LED数量
+ *		keyConfig: 按键IO配置
+ * 		keyCB: 按键发生变化时要执行的回调函数，按键信息被保存在ll_keyWhich[keyNum]结构体数组
+ *		overTime: 检测时间阈值，推荐150ms左右
+ *		longPressTime: 长按检测时间阈值，推荐800ms左右
  ====================================================================================*/
-extern ll_keyConfig_t ll_keyConfig[LL_KEY_PORT_NUM];
-extern struct ll_keyWhich_t ll_keyWhich[LL_KEY_PORT_NUM];
-void LLOS_Key_Init(uint16_t ms, uint8_t timerN);
-
-/*====================================================================================
- * 函数名: LLOS_Key_RegisterCB
- * 描述: 注册按键回调函数
- * 参数:
- *		keyCB: 按键发生变化时要执行的回调函数，按键信息被保存在ll_keyWhich[LL_KEY_PORT_NUM]结构体数组
- ====================================================================================*/
-void LLOS_Key_RegisterCB(ll_keyCB_t keyCB);
+extern struct ll_keyWhich_t *ll_keyWhich;
+void LLOS_Key_Init(uint16_t ms, uint8_t timerN, uint8_t keyNum, struct ll_keyConfig_t *keyConfig, ll_keyCB_t keyCB, uint16_t overTime, uint16_t longPressTime);
 
 #ifdef __cplusplus
  }

@@ -2,6 +2,7 @@
  * 作者: LittleLeaf All rights reserved
  */
 #include <llos_DS18B20.h>
+#include <llos_crc.h>
 
 struct ll_DS18B20_hw_t ll_DS18B20_hw = {0};
 struct ll_DS18B20_Data_t ll_DS18B20_Data = {0};
@@ -11,20 +12,19 @@ static bool busy;
 
 static ll_taskId_t ds18b20TaskId = LL_ERR_INVALID;
 static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events);
-static uint8_t CRC8(uint8_t *_data, uint8_t len);
 static void LLOS_DS18B20_GetData(void);
 
 static uint8_t LLOS_DS18B20_RST(void)
 {
     uint8_t var = 0xFF;
 	
-    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_set);
+    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set);
     LLOS_DelayUs(5);
-    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_reset);
+    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_reset);
     LLOS_DelayUs(500);    	/* 拉低至少480us来发送复位脉冲 */
-    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_set);
+    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set);
     LLOS_DelayUs(70);   	/* 等待15-60us */
-    var = LLOS_Device_ReadPin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin); /* 检测DS18B20 */
+    var = LLOS_Device_ReadPin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ); /* 检测DS18B20 */
     LLOS_DelayUs(500);  	/* 至少480us */
 	
     return var;
@@ -37,16 +37,16 @@ static void LLOS_DS18B20_WriteByte(uint8_t data)
     {
         if(data & 0x01)
         {
-            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_reset);
+            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_reset);
             LLOS_DelayUs(5);	/* 15us内释放总线->发1 */
-            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_set);
+            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set);
             LLOS_DelayUs(70);	/* 在15-60us的窗口期采样 */
         }
         else
         {
-            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_reset);
+            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_reset);
             LLOS_DelayUs(70);	/* 至少60us->发0 */
-            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_set);
+            LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set);
             LLOS_DelayUs(5);	/* 在15-60us的窗口期采样 */
         }
         data >>= 1;
@@ -58,11 +58,11 @@ static uint8_t LLOS_DS18B20_ReadByte(void)
     for(var = 0; var < 8; var++)
     {
         data >>= 1;
-        LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_reset);
+        LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_reset);
         LLOS_DelayUs(5);	/* 拉低至少1us */
-        LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_set);
+        LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set);
         LLOS_DelayUs(10);	/* 15us内开始采样 */
-        if(LLOS_Device_ReadPin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin))
+        if(LLOS_Device_ReadPin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ))
 			data |= 0x80; 	/* 低位在前  */
         LLOS_DelayUs(60);	/* 10+60>15+45us */
     }
@@ -102,7 +102,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 		return 1;
 	}
 	
-    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.devDQPin, ll_set); /* 释放总线 */
+    LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set); /* 释放总线 */
 	LLOS_DelayMs(10);
 	
 	if(LLOS_DS18B20_RST())
@@ -219,16 +219,21 @@ static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 				array[7] = LLOS_DS18B20_ReadByte();
 				crc = LLOS_DS18B20_ReadByte();
 
-				if(crc != CRC8(array, sizeof(array)))
+				if(crc != LLOS_CRC_CAL(&ll_crcModel_CRC8_MAXIM, array, sizeof(array)))
 				{
 					ll_DS18B20_Data.err = 0x01;
 					ll_DS18B20_Data.temperature = -99.9f;
+					return 0x01;
 				}
 				
 				if(temp & 0x8000)
+				{
 					ll_DS18B20_Data.temperature = -((uint16_t)(~temp + 1) * 0.0625);
+				}
 				else 
+				{
 					ll_DS18B20_Data.temperature = temp * 0.0625;
+				}
 				
 				ll_DS18B20_Data.err = 0x00;
 			}
@@ -276,54 +281,4 @@ ll_err_t LLOS_DS18B20_WriteEEPROM(void)
 	
 	busy = false;
 	return LL_ERR_FAILED;
-}
-
-static uint8_t CRC8(uint8_t *_data, uint8_t len)
-{
-    uint16_t CRC_value = 0x00;				/* 初始值 */
-    uint8_t i, j;
-    uint16_t tmp;
-
-	for(i = 0; i < len; i++)
-	{
-		tmp = 0x00;
-		for(j = 0; j < 8; ++j)
-		{
-			tmp <<= 1;     					/* 向高位移动 */
-			tmp |= (*(_data + i) & 0x01);	/* 提取输入数据最低位 */
-			*(_data + i) >>= 1;            	/* 将最低位移出 */
-		}
-		*(_data + i) = tmp;
-	}
-    for(i = 0; i < len; i++)
-    {
-        CRC_value ^= *(_data + i);
-        for(j = 0; j < 8; j++)
-        {
-            if(CRC_value & 0x80)CRC_value = (CRC_value << 1) ^ 0x31;
-            else CRC_value = CRC_value << 1;
-        }
-    }
-	tmp = 0x00;
-	for(i = 0; i < 8; i++)
-	{
-		tmp <<= 1;     						/* 向高位移动 */
-		tmp |= (CRC_value & 0x01);			/* 提取输入数据最低位 */
-		CRC_value >>= 1;            		/* 将最低位移出 */
-	}
-	CRC_value = tmp;
-	for(i = 0; i < len; i++)
-	{
-		tmp = 0x00;
-		for(j = 0; j < 8; j++)
-		{
-			tmp <<= 1;     					/* 向高位移动 */
-			tmp |= (*(_data + i) & 0x01);	/* 提取输入数据最低位 */
-			*(_data + i) >>= 1;            	/* 将最低位移出 */
-		}
-		*(_data + i) = tmp;
-	}
-    CRC_value ^= 0x00;						/* 结果异或值 */
-	
-    return CRC_value;
 }

@@ -1,8 +1,8 @@
 /*
  * DS18B20驱动
  * 作者: LittleLeaf All rights reserved
- * 版本: V1.0.1
- * 修订日期: 2024 12 14
+ * 版本: V2.0.0
+ * 修订日期: 2024/02/25
  */
 #ifndef __LLOS_DS18B20_H
 #define __LLOS_DS18B20_H
@@ -38,8 +38,8 @@ enum ll_DS18B20_CMD_Resolution_t
 
 struct ll_DS18B20_hw_t
 {
-	ll_device_t *devGPIO;
-	uint32_t devDQPin;
+	ll_device_list_t *devGPIO;
+	uint32_t pinDQ;
 };
 
 struct ll_DS18B20_Data_t

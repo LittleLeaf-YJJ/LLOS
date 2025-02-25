@@ -24,6 +24,8 @@ struct usartBuf_t
 	volatile bool rxOK;
 }usart1_recBuf;
 
+static uint32_t pMemPool[1024];
+
 /* ========================[函数声明]========================= */
 
 void System_Init(void)
@@ -34,11 +36,21 @@ void System_Init(void)
 	usart1_recBuf.rxOK = false;
 	
 	/* LLOS初始化 */
-	LLOS_Init(NVIC_SystemReset, HAL_Delay, NULL);
-	LLOS_Cmd_Init("LittleLeaf", "LLOS", LLOS_VERSION, "00000001");
+	struct ll_init_delayCBs_t init_delayCBs = {0};
+	struct ll_init_memCfgs_t init_memCfgs = {0};
+	
+	init_delayCBs.osDelayMs = HAL_Delay;
+	init_memCfgs.taskNum = 10;
+	init_memCfgs.timerNum = 5;
+	init_memCfgs.alarmNum = 3;
+	init_memCfgs.deviceNum = 10;
+	init_memCfgs.pPool = pMemPool;
+	init_memCfgs.poolSize = sizeof(pMemPool);
+	LLOS_Init(NVIC_SystemReset, &init_delayCBs, &init_memCfgs);
+	LLOS_Cmd_Init(255, "LittleLeaf", "LLOS", LLOS_VERSION, "00000001");
 	
 	/* LLOS LED模块初始化 */
-	LLOS_LED_Init(10, 0);
+	LLOS_LED_Init(10, 0, 1);
 	LLOS_LED_Blink(PORT_LED, PIN_LED0, 255, 10, 500);
 	
 	/* Task初始化 */

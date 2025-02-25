@@ -20,42 +20,111 @@ struct ll_timerCB_list_t
 	bool mode;
 	ll_timerCB_t timerCB;
 };
-
+struct ll_alarm_list_t
+{
+	uint32_t Sec;
+	ll_alarmCB_t CB;
+};
 struct ll_rtc_t
 {
 	ll_tick_t initTick;
 	volatile uint32_t sec;
 };
-struct ll_alarm_t
-{
-	uint32_t Sec;
-	ll_alarmCB_t CB;
-};
 
 static volatile ll_tick_t sysTick;
 static volatile uint8_t tickMultiple = 1;
-static ll_taskId_t taskIndex;
-static const void *msg[LL_TASK_NUM];
-
-static struct ll_eventCB_list_t eventCB_list[LL_TASK_NUM]; /* 0xFF保留不可用 */
-static struct ll_timerCB_list_t timerCB_list[LL_TIMER_NUM];
+static ll_taskId_t taskIndex;	/* 0xFF保留不可用 */
+static ll_deviceId_t deviceIndex;
 static struct ll_rtc_t rtc;
-static struct ll_alarm_t alarm[LL_ALARM_NUM];
+
+static struct ll_init_delayCBs_t ll_osDelayCB;
+static struct ll_init_memCfgs_t ll_memCfgs;
+static ll_errHandler_hook_t ll_errHandler_hook;
+static ll_system_reset_hook_t ll_system_reset_hook;
+static ll_LP_hook_t ll_LP_CB;
+static uint16_t ll_cmd_bufSize;
+
+static struct ll_eventCB_list_t *eventCB_list;
+static void const **msg_list;
+static struct ll_timerCB_list_t *timerCB_list;
+static struct ll_alarm_list_t *alarm_list;
+static ll_device_list_t *device_list;
+static cmd_t context;
 
 struct ll_calendar_t ll_calendar;
 
-static uint32_t heap[LL_HEAP_SIZE / 4 + 1] __LL_ALIGNED(4);
-
-static ll_userDelay_hook_t ll_userDelayMs, ll_userDelayUs;
-static ll_errHandler_hook_t ll_errHandler_hook;
-static ll_system_reset_hook_t ll_system_reset_hook;
-
-void LLOS_Init(ll_system_reset_hook_t system_reset_hook, ll_userDelay_hook_t userDelayMs, ll_userDelay_hook_t userDelayUs)
+void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs_t *osDelayCB, struct ll_init_memCfgs_t *memCfg)
 {
+	uint32_t size;
+	
 	ll_system_reset_hook = system_reset_hook;
-	ll_userDelayMs = userDelayMs;
-	ll_userDelayUs = userDelayUs;
-
+	ll_osDelayCB.osDelayMs = osDelayCB->osDelayMs;
+	ll_osDelayCB.osDelayUs = osDelayCB->osDelayUs;
+	
+	ll_memCfgs.taskNum = memCfg->taskNum;
+	ll_memCfgs.timerNum = memCfg->timerNum;
+	ll_memCfgs.alarmNum = memCfg->alarmNum;
+	ll_memCfgs.deviceNum = memCfg->deviceNum;
+	
+	ll_memCfgs.pPool = memCfg->pPool;
+	ll_memCfgs.poolSize = memCfg->poolSize;
+	if(ll_memCfgs.pPool == NULL)
+	{
+		LOG_E("LLOS_Init ", "memCfg->pPool NULL!\r\n");
+		while(1);
+	}
+	if(ll_memCfgs.poolSize <= sizeof(uint32_t))
+	{
+		LOG_E("LLOS_Init ", "memCfg->poolSize <= sizeof(uint32_t)!\r\n");
+		while(1);
+	}
+	memset(ll_memCfgs.pPool, 0, ll_memCfgs.poolSize);
+	
+	size = sizeof(struct ll_eventCB_list_t) * ll_memCfgs.taskNum;
+	eventCB_list = LLOS_malloc(size);
+	if(eventCB_list == NULL)
+	{
+		LOG_E("LLOS_Init ", "eventCB_list malloc null!\r\n");
+		while(1);
+	}
+	memset(eventCB_list, 0, size);
+	
+	size = sizeof(void *) * ll_memCfgs.taskNum;
+	msg_list = LLOS_malloc(size);
+	if(msg_list == NULL)
+	{
+		LOG_E("LLOS_Init ", "msg_list malloc null!\r\n");
+		while(1);
+	}
+	memset(msg_list, 0, size);
+	
+	size = sizeof(struct ll_timerCB_list_t) * ll_memCfgs.timerNum;
+	timerCB_list = LLOS_malloc(size);
+	if(eventCB_list == NULL && ll_memCfgs.timerNum != 0)
+	{
+		LOG_E("LLOS_Init ", "timerCB_list malloc null!\r\n");
+		while(1);
+	}
+	memset(timerCB_list, 0, size);
+	
+	size = sizeof(struct ll_alarm_list_t) * ll_memCfgs.alarmNum;
+	alarm_list = LLOS_malloc(size);
+	if(eventCB_list == NULL && ll_memCfgs.alarmNum != 0)
+	{
+		LOG_E("LLOS_Init ", "alarm_list malloc null!\r\n");
+		while(1);
+	}
+	memset(alarm_list, 0, size);
+	
+	size = sizeof(ll_device_list_t) * ll_memCfgs.deviceNum;
+	device_list = LLOS_malloc(size);
+	if(device_list == NULL && ll_memCfgs.deviceNum != 0)
+	{
+		LOG_E("LLOS_Init ", "ll_device_list malloc null!\r\n");
+		while(1);
+	}
+	memset(device_list, 0, size);
+	
 	LOG_D("LLOS_Init ", "H  e  l  l  o   --     --  \r\n");
 	LOG_D("LLOS_Init ", "|      |      |    | |     \r\n");
 	LOG_D("LLOS_Init ", "|      |      |    |  --   \r\n");
@@ -66,9 +135,9 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, ll_userDelay_hook_t use
 
 ll_taskId_t LLOS_Register_Events(ll_eventCB_t ll_eventCB)
 {
-	if(taskIndex >= LL_TASK_NUM)
+	if(taskIndex >= 255)
 	{
-		LOG_E("LLOS_Register_Events: ", "> LL_TASK_NUM!\r\n");
+		LOG_E("LLOS_Register_Events: ", ">= 255!\r\n");
 		return LL_ERR_INVALID;
 	}
 
@@ -101,7 +170,9 @@ void LLOS_Loop(void)
 					eventCB_list[i].eventCB != NULL)
 			{
 				/* 启动对应的事件并且清除返回的事件 */
+				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & (0x0001 << j), ll_disable);
 				eventCB_list[i].oldEvents ^= eventCB_list[i].eventCB(i, eventCB_list[i].oldEvents & (0x0001 << j));
+				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & (0x0001 << j), ll_enable);
 				/* 如果事件标志已被清除则取消激活该事件 */
 				if((eventCB_list[i].oldEvents & (0x0001 << j)) == 0x0000)
 				{
@@ -116,7 +187,7 @@ void LLOS_Start_Event(ll_taskId_t taskId, ll_taskEvent_t events, ll_tick_t tick)
 {
 	uint8_t i;
 
-	if(taskId >= LL_TASK_NUM)
+	if(taskId >= ll_memCfgs.taskNum)
 	{
 		LOG_E("LLOS_Start_Event: ", "> LL_TASK_NUM!\r\n");
 		return;
@@ -136,7 +207,7 @@ void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
 {
 	uint8_t i;
 
-	if(taskId >= LL_TASK_NUM)
+	if(taskId >= ll_memCfgs.taskNum)
 	{
 		LOG_E("LLOS_Stop_Event: ", "> LL_TASK_NUM!\r\n");
 		return;
@@ -177,17 +248,17 @@ void LLOS_Tick_Increase(uint8_t ms)
 	{
 		rtc.sec++;
 
-		for(i = 0; i < LL_ALARM_NUM; i++)
+		for(i = 0; i < ll_memCfgs.alarmNum; i++)
 		{
-			if(rtc.sec >= alarm[i].Sec && alarm[i].CB != NULL)
+			if(rtc.sec >= alarm_list[i].Sec && alarm_list[i].CB != NULL)
 			{
-				alarm[i].CB(i);
-				alarm[i].CB = NULL;
+				alarm_list[i].CB(i);
+				alarm_list[i].CB = NULL;
 			}
 		}
 	}
 	/* 软件定时器 */
-	for(i = 0; i < LL_TIMER_NUM; i++)
+	for(i = 0; i < ll_memCfgs.timerNum; i++)
 	{
 		if(
 				timerCB_list[i].newState &&
@@ -205,29 +276,29 @@ void LLOS_Tick_Increase(uint8_t ms)
 
 ll_err_t LLOS_Msg_Send(ll_taskId_t taskId, const void *pMsg)
 {
-	if(taskId >= LL_TASK_NUM)
+	if(taskId >= ll_memCfgs.taskNum)
 	{
 		LOG_E("LLOS_Msg_Send: ", "> LL_TASK_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 	
-	msg[taskId] = pMsg;
+	msg_list[taskId] = pMsg;
 	LLOS_Start_Event(taskId, LL_EVENT_MSG, 0);
 	
 	return LL_ERR_SUCCESS;
 }
 const void *LLOS_Msg_Receive(ll_taskId_t taskId)
 {
-	return msg[taskId];
+	return msg_list[taskId];
 }
 ll_err_t LLOS_Msg_Clear(ll_taskId_t taskId)
 {
-	if(taskId >= LL_TASK_NUM)
+	if(taskId >= ll_memCfgs.taskNum)
 	{
 		LOG_E("LLOS_Msg_Clear: ", "> LL_TASK_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
-	msg[taskId] = NULL;
+	msg_list[taskId] = NULL;
 	
 	return LL_ERR_SUCCESS;
 }
@@ -239,26 +310,26 @@ ll_tick_t LLOS_Ms_To_Tick(uint32_t ms)
 
 void LLOS_DelayMs(uint32_t time)
 {
-	if(ll_userDelayMs == NULL)
+	if(ll_osDelayCB.osDelayMs == NULL)
 	{
-		return;
 		LOG_E("LLOS_DelayMs: ", "NULL!\r\n");
+		return;
 	}
-	ll_userDelayMs(time);
+	ll_osDelayCB.osDelayMs(time);
 }
 void LLOS_DelayUs(uint32_t time)
 {
-	if(ll_userDelayUs == NULL)
+	if(ll_osDelayCB.osDelayUs == NULL)
 	{
 		LOG_E("LLOS_DelayUs: ", "NULL!\r\n");
 		return;
 	}
-	ll_userDelayUs(time);
+	ll_osDelayCB.osDelayUs(time);
 }
 
 ll_err_t LLOS_Timer_Set(uint8_t timerN, ll_newState_t newState, bool mode, ll_tick_t tick, ll_timerCB_t timerCB)
 {
-	if(timerN >= LL_TIMER_NUM)
+	if(timerN >= ll_memCfgs.timerNum)
 	{
 		LOG_E("LLOS_Timer_Set: ", "> LL_TIMER_NUM!\r\n");
 		return LL_ERR_INVALID;
@@ -369,7 +440,7 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 	uint16_t t;
 	uint32_t toSec = 0;
 
-	if(alarmN >= LL_ALARM_NUM)
+	if(alarmN >= ll_memCfgs.alarmNum)
 	{
 		LOG_E("LLOS_RTC_SetAlarm: ", "> LL_ALARM_NUM!\r\n");
 		return LL_ERR_INVALID;
@@ -393,8 +464,8 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 	toSec += hour * 3600;
 	toSec += min * 60;
 	toSec += sec;
-	alarm[alarmN].Sec = toSec;
-	alarm[alarmN].CB = alarmCB;
+	alarm_list[alarmN].Sec = toSec;
+	alarm_list[alarmN].CB = alarmCB;
 	
 	return LL_ERR_SUCCESS;
 }
@@ -439,15 +510,15 @@ void *LLOS_malloc(uint16_t size_t)
 	uint32_t *nextHead;
 	uint16_t i, size;
 
-	if(size_t > sizeof(heap) || size_t < 1)return NULL;
+	if(size_t > ll_memCfgs.poolSize || size_t < 1)return NULL;
 
-	head = heap;
+	head = ll_memCfgs.pPool;
 	size =  size_t >> 2;
 	if((size_t & 3) != 0)size += 1;
 
 	do
 	{
-		if((head + size) >= heap + (sizeof(heap) >> 2)) /* 内存不足，分配失败 */
+		if((head + size) >= ll_memCfgs.pPool + (ll_memCfgs.poolSize >> 2)) /* 内存不足，分配失败 */
 		{
 			return NULL;
 //			break;
@@ -494,6 +565,29 @@ void LLOS_free(void *p)
 		for(i = 0; i <= size; i++)head[i] = 0;
 	}
 }
+uint16_t LLOS_MemoryPool_GetSize(void)
+{
+    uint32_t *head; 										/* 表头指针 */
+    uint32_t *end;  										/* 内存池末尾 */
+	
+    head = ll_memCfgs.pPool;  								/* 内存池起始位置 */
+    end = ll_memCfgs.pPool + (ll_memCfgs.poolSize >> 2);  	/* 内存池末尾位置 */
+    
+    while (head < end)
+    {
+        if((head[0] >> 24) == 0xcd && (head[0] & 0xff) == 0xac)  	/* 表头标记为已分配内存 */
+        {
+            uint16_t blockSize = (head[0] >> 8) & 0xffff;  			/* 获取已分配的内存块大小 */
+            head += blockSize + 1;									/* 跳过当前已分配的内存块 */
+        }
+        else
+        {
+			break;
+        }
+    }
+    
+    return head - ll_memCfgs.pPool;	
+}
 
 void LLOS_Register_ErrorHandler(ll_errHandler_hook_t errHandler_hook)
 {
@@ -518,32 +612,34 @@ void LLOS_System_Reset(void)
 	ll_system_reset_hook();
 }
 
-/* =====================================[设备驱动框架]====================================== */
-static ll_deviceId_t deviceIndex;
-static ll_device_t ll_deviceList[LL_DEV_MAX_NUM];
-
-ll_deviceId_t LLOS_Register_Device(ll_device_t *dev)
+void LLOS_Register_LP(ll_LP_hook_t LP_CB)
 {
-	if(deviceIndex >= LL_DEV_MAX_NUM)
+	ll_LP_CB = LP_CB;
+}
+
+/* =====================================[设备驱动框架]====================================== */
+ll_deviceId_t LLOS_Register_Device(ll_device_list_t *dev)
+{
+	if(deviceIndex >= ll_memCfgs.deviceNum)
 	{
 		LOG_E("LLOS_Register_Device: ", "> LL_DEV_MAX_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 
-	ll_deviceList[deviceIndex].deviceId = deviceIndex;
-	ll_deviceList[deviceIndex].name = dev->name;
+	device_list[deviceIndex].deviceId = deviceIndex;
+	device_list[deviceIndex].name = dev->name;
 
-	ll_deviceList[deviceIndex].initCB = dev->initCB;
-	ll_deviceList[deviceIndex].openCB = dev->openCB;
-	ll_deviceList[deviceIndex].closeCB = dev->closeCB;
-	ll_deviceList[deviceIndex].readCB = dev->readCB;
-	ll_deviceList[deviceIndex].writeCB = dev->writeCB;
-	ll_deviceList[deviceIndex].write_readCB = dev->write_readCB;
-	ll_deviceList[deviceIndex].readPinCB = dev->readPinCB;
-	ll_deviceList[deviceIndex].writePinCB = dev->writePinCB;
-	ll_deviceList[deviceIndex].DMA_readCB = dev->DMA_readCB;
-	ll_deviceList[deviceIndex].DMA_writeCB = dev->DMA_writeCB;
-	ll_deviceList[deviceIndex].ctrlCB = dev->ctrlCB;
+	device_list[deviceIndex].initCB = dev->initCB;
+	device_list[deviceIndex].openCB = dev->openCB;
+	device_list[deviceIndex].closeCB = dev->closeCB;
+	device_list[deviceIndex].readCB = dev->readCB;
+	device_list[deviceIndex].writeCB = dev->writeCB;
+	device_list[deviceIndex].write_readCB = dev->write_readCB;
+	device_list[deviceIndex].readPinCB = dev->readPinCB;
+	device_list[deviceIndex].writePinCB = dev->writePinCB;
+	device_list[deviceIndex].DMA_readCB = dev->DMA_readCB;
+	device_list[deviceIndex].DMA_writeCB = dev->DMA_writeCB;
+	device_list[deviceIndex].ctrlCB = dev->ctrlCB;
 
 	deviceIndex++;
 
@@ -555,19 +651,19 @@ uint8_t LLOS_Device_GetNum(void)
 	return deviceIndex;
 }
 
-ll_device_t *LLOS_Device_Find(const char *name)
+ll_device_list_t *LLOS_Device_Find(const char *name)
 {
-	for(ll_deviceId_t i = 0; i < LL_DEV_MAX_NUM; i++)
+	for(ll_deviceId_t i = 0; i < ll_memCfgs.deviceNum; i++)
 	{
-		if(strcmp(name, ll_deviceList[i].name) == 0)
+		if(strcmp(name, device_list[i].name) == 0)
 		{
-			return &ll_deviceList[i];
+			return &device_list[i];
 		}
 	}
 	return NULL;
 }
 
-ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg)
+ll_err_t LLOS_Device_Init(ll_device_list_t *dev, void *arg)
 {
 	if(dev == NULL || dev->initCB == NULL)
 	{
@@ -576,7 +672,7 @@ ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg)
 	}
 	return dev->initCB(dev, arg);
 }
-ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd)
+ll_err_t LLOS_Device_Open(ll_device_list_t *dev, uint32_t cmd)
 {
 	if(dev == NULL || dev->openCB == NULL)
 	{
@@ -586,7 +682,7 @@ ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd)
 	dev->isOpen  = true;
 	return dev->openCB(dev, cmd);
 }
-ll_err_t LLOS_Device_Close(ll_device_t *dev)
+ll_err_t LLOS_Device_Close(ll_device_list_t *dev)
 {
 	if(dev == NULL || dev->closeCB == NULL)
 	{
@@ -596,7 +692,7 @@ ll_err_t LLOS_Device_Close(ll_device_t *dev)
 	dev->isOpen  = false;
 	return dev->closeCB(dev);
 }
-ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
+ll_err_t LLOS_Device_Read(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->readCB == NULL)
 	{
@@ -605,7 +701,7 @@ ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, v
 	}
 	return dev->readCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
+ll_err_t LLOS_Device_Write(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->writeCB == NULL)
 	{
@@ -614,7 +710,7 @@ ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, 
 	}
 	return dev->writeCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len)
+ll_err_t LLOS_Device_WriteRead(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len)
 {
 	if(dev == NULL || dev->write_readCB == NULL)
 	{
@@ -623,7 +719,7 @@ ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offs
 	}
 	return dev->write_readCB(dev, address, offset, writeData, readData, len);
 }
-uint32_t LLOS_Device_ReadPin(struct ll_device *dev, uint32_t pin)
+uint32_t LLOS_Device_ReadPin(ll_device_list_t *dev, uint32_t pin)
 {
 	if(dev == NULL || dev->readPinCB == NULL)
 	{
@@ -632,7 +728,7 @@ uint32_t LLOS_Device_ReadPin(struct ll_device *dev, uint32_t pin)
 	}
 	return dev->readPinCB(dev, pin);
 }
-ll_err_t LLOS_Device_WritePin(struct ll_device *dev, uint32_t pin, ll_bit_t newState)
+ll_err_t LLOS_Device_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newState)
 {
 	if(dev == NULL || dev->writePinCB == NULL)
 	{
@@ -641,7 +737,7 @@ ll_err_t LLOS_Device_WritePin(struct ll_device *dev, uint32_t pin, ll_bit_t newS
 	}
 	return dev->writePinCB(dev, pin, newState);
 }
-ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
+ll_err_t LLOS_Device_DMARead(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->DMA_readCB == NULL)
 	{
@@ -650,7 +746,7 @@ ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset
 	}
 	return dev->DMA_readCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
+ll_err_t LLOS_Device_DMAWrite(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->DMA_writeCB == NULL)
 	{
@@ -659,7 +755,7 @@ ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offse
 	}
 	return dev->DMA_writeCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg)
+ll_err_t LLOS_Device_Ctrl(ll_device_list_t *dev, uint32_t cmd, void *arg)
 {
 	if(dev == NULL || dev->ctrlCB == NULL)
 	{
@@ -670,8 +766,6 @@ ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg)
 }
 
 /* =====================================[指令解析]====================================== */
-#if LL_CMD_ENABLE
-
 #define UNIT_CONVERT() do\
 {\
 	if(strncmp(endptr, "mA", 2) == 0 || strncmp(endptr, "mV", 2) == 0 || strncmp(endptr, "ms", 2) == 0 || strncmp(endptr, "mm", 2) == 0 || strncmp(endptr, "mF", 2) == 0 || strncmp(endptr, "mH", 2) == 0 || strncmp(endptr, "mW", 2) == 0)\
@@ -747,12 +841,29 @@ static int compare(const void *a, const void *b)
 	else if(strlen(sb->pattern) < strlen(sa->pattern))return -1;
 	else return 0;
 }
-void LLOS_Cmd_Init(const char *vid, const char *pid, const char *version, const char *sn)
+void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const char *version, const char *sn)
 {
+	uint32_t size;
+	
 	pvid = vid;
 	ppid = pid;
 	pversion = version;
 	psn = sn;
+	
+	ll_cmd_bufSize = bufSize;
+	if(ll_cmd_bufSize <= sizeof(char))
+	{
+		LOG_E("LLOS_Cmd_Init ", "bufSize <= sizeof(char)");
+		while(1);
+	}
+
+	size = sizeof(char) * bufSize;
+	context.buffer = LLOS_malloc(size);
+	if(context.buffer == NULL)
+	{
+		LOG_E("LLOS_Cmd_Init ", "context.buffer malloc null!\r\n");
+		while(1);
+	}
 	
 	int i;
 	for(i = 0; cmdList[i].callback != NULL; i++);
@@ -762,7 +873,6 @@ void LLOS_Cmd_Init(const char *vid, const char *pid, const char *version, const 
 bool LLOS_Cmd_Input(const char *data, uint32_t len)
 {
     bool isFound = false;
-	cmd_t context = {0};
 	
     for(int i = 0; cmdList[i].callback != NULL; i++)
 	{
@@ -771,7 +881,7 @@ bool LLOS_Cmd_Input(const char *data, uint32_t len)
         if(strncasecmp(cmdList[i].pattern, data, pattern_len) == 0)				/* 匹配指令 */
 		{
             context.len = len - pattern_len;									/* 获取除去指令后字符串数据长度 */
-			if(context.len > LL_CMD_BUFFER_LEN)context.len = LL_CMD_BUFFER_LEN;
+			if(context.len > ll_cmd_bufSize)context.len = ll_cmd_bufSize;
 			strncpy(context.buffer, data + pattern_len, context.len);			/* 获取除去指令后字符串数据 */
             if(context.len > 0 && cmdList[i].callback != NULL)
 			{
@@ -946,7 +1056,7 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
 	{
 		if(copy_len < 4)
 		{
-			LOG_E("LLOS_Cmd_ParamCopyText: ", "copy_len < 4!\r\n");
+			LOG_E("LLOS_Cmd_ParamCopyText: ", "copy len < 4!\r\n");
 			return LL_ERR_FAILED;
 		}
 		strncpy(text, context->buffer, 3);
@@ -983,5 +1093,3 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
     
     return LL_ERR_SUCCESS;
 }
-
-#endif

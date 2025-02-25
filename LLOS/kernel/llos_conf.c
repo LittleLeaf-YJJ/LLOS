@@ -4,14 +4,12 @@
 #include <llos.h>
 
 /* =====================================[指令解析框架]====================================== */
-#if LL_CMD_ENABLE
-
 extern ll_err_t LLOS_Cmd_IDN(cmd_t *context);
 extern ll_err_t LLOS_Cmd_RST(cmd_t *context);
 
 ll_err_t LLOS_Cmd_Test(cmd_t *context)
 {
-	/* 测试指令 *Test FALSE,2.66mV,-2kA,"Hello world!"*/
+	/* 测试指令 *Test FALSE,2.66mV,-2kA,"Hello world!" */
 	bool a;
 	float b;
 	int32_t c;
@@ -50,5 +48,3 @@ struct cmdList_t cmdList[] =
 	
     {.pattern = "", .callback = NULL}, 						/* 结束标志 */
 };
-
-#endif

@@ -53,8 +53,8 @@
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
-          <DebugInformation>1</DebugInformation>
-          <BrowseInformation>1</BrowseInformation>
+          <DebugInformation>0</DebugInformation>
+          <BrowseInformation>0</BrowseInformation>
           <ListingPath></ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
@@ -81,7 +81,7 @@
           </BeforeMake>
           <AfterMake>
             <RunUserProg1>0</RunUserProg1>
-            <RunUserProg2>1</RunUserProg2>
+            <RunUserProg2>0</RunUserProg2>
             <UserProg1Name></UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
@@ -314,13 +314,13 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>6</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
             <Strict>0</Strict>
             <EnumInt>0</EnumInt>
-            <PlainCh>0</PlainCh>
+            <PlainCh>1</PlainCh>
             <Ropi>0</Ropi>
             <Rwpi>0</Rwpi>
             <wLevel>3</wLevel>
@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../LLOS/kernel;../LLOS/drivers;../General_Files;../General_Files/drivers;../General_Files/hal;../General_Files/apps</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../General_Files;../General_Files/drivers;../General_Files/hal;../General_Files/apps;..\..\..\..\LLOS\kernel;..\..\..\..\LLOS\drivers</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -515,14 +515,14 @@
           <GroupName>LLOS/kernel</GroupName>
           <Files>
             <File>
-              <FileName>llos.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\LLOS\kernel\llos.c</FilePath>
-            </File>
-            <File>
               <FileName>llos_conf.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\LLOS\kernel\llos_conf.c</FilePath>
+              <FilePath>..\..\..\..\LLOS\kernel\llos_conf.c</FilePath>
+            </File>
+            <File>
+              <FileName>llos.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\LLOS\kernel\llos.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -532,7 +532,7 @@
             <File>
               <FileName>llos_led.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\LLOS\drivers\llos_led.c</FilePath>
+              <FilePath>..\..\..\..\LLOS\drivers\llos_led.c</FilePath>
             </File>
           </Files>
         </Group>

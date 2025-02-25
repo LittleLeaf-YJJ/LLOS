@@ -1,8 +1,10 @@
 /*
  * SSD1306/CH1115以及兼容的屏幕驱动
  * 作者: LittleLeaf All rights reserved
- * 版本: V1.0.0T
- * 修订日期: 2024 09 12
+ * 版本: V2.0.0
+ * 修订日期: 2025/02/25
+ * 备注：
+ * 不要勾选 'Plain Char is Signed'
  */
 #ifndef __LLOS_SSD1306_H
 #define __LLOS_SSD1306_H
@@ -34,7 +36,7 @@ enum ll_SSD1306_sizeFont_t
 	ll_SSD1306_sizeFont_8x16 = 16,
 };
 
-typedef struct
+struct ll_SSD1306_screenConf_t
 {
 	enum ll_SSD1306_screenType_t type;
 	enum ll_SSD1306_screen_xOffset_t xOffset;
@@ -42,7 +44,20 @@ typedef struct
 	uint8_t isInvert;
 	uint8_t isInvertPhase;
 	uint8_t brightness;
-}ll_SSD1306_screenConfig_t;
+	uint16_t width;
+	uint16_t height;
+};
+struct ll_SSD1306_conf_t
+{
+	ll_device_list_t *devSPI_I2C;					/* SPI/I2C设备 */
+	ll_device_list_t *devDC;						/* DC所使用的GPIO设备，I2C模式下必须为NULL */
+	ll_device_list_t *devCS;						/* CS所使用的GPIO设备 */
+	uint32_t pinDC;									/* DC所使用的引脚 */
+	uint32_t pinCSorAddr;							/* CS所使用的引脚或I2C地址 */
+
+	bool isDMA;										/* 是否使用DMA方式画图 */
+	struct ll_SSD1306_screenConf_t screenConf;		/* SSD1306配置 */
+};
 
 /*====================================================================================
  * 函数指针类型: ll_I8080_WriteByteCB_t
@@ -63,14 +78,29 @@ typedef void (*ll_I8080_WriteByteCB_t)(uint8_t data, enum ll_SSD1306_cmdType_t c
 typedef void (*ll_I8080_DMAWriteCB_t)(const uint8_t *pic, uint32_t len);
 
 /*====================================================================================
- * 函数名: LLOS_SSD1306_Init
- * 描述: 注册相关回调函数和设置屏幕参数
+ * 函数名: LLOS_SSD1306_HAL_Init
+ * 描述: SSD1306HAL层初始化
  * 参数:
- * 		I8080_WriteByteCB: 写字节回调函数
- *		I8080_DMAWriteCB：DMA写回调函数，注册回调后LLOS_SSD1306_DrawPic为DMA模式
+ * 		SSD1306_conf: 配置结构体
+ *		screenNum: 屏幕数量
+ ====================================================================================*/
+void LLOS_SSD1306_HAL_Init(struct ll_SSD1306_conf_t *SSD1306_conf, uint8_t screenNum);
+
+/*====================================================================================
+ * 函数名: LLOS_SSD1306_HAL_Select
+ * 描述: SSD1306HAL层选择设备
+ * 参数:
+ *		id: 设备id
+ ====================================================================================*/
+void LLOS_SSD1306_HAL_Select(uint8_t id);
+
+/*====================================================================================
+ * 函数名: LLOS_SSD1306_Init
+ * 描述: 初始化设置屏幕参数
+ * 参数:
  * 		screenConfig: 屏幕参数
  ====================================================================================*/
-void LLOS_SSD1306_Init(ll_I8080_WriteByteCB_t I8080_WriteByteCB, ll_I8080_DMAWriteCB_t I8080_DMAWriteCB, ll_SSD1306_screenConfig_t *screenConfig);
+void LLOS_SSD1306_Init(struct ll_SSD1306_screenConf_t *screenConfig);
 
 /*====================================================================================
  * 函数名: LLOS_SSD1306_ScreenEN

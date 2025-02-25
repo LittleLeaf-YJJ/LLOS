@@ -3,7 +3,7 @@
 
 ll_taskId_t task0Id = LL_ERR_INVALID;
 
-ll_taskEvent_t Task0_Events(ll_taskId_t taskId, ll_taskEvent_t events)
+static ll_taskEvent_t Task0_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 {
 	if(events & LL_EVENT_MSG)
 	{

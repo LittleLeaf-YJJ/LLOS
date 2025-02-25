@@ -5,8 +5,8 @@
  * 响调度精度，所以建议尽可能地使用状态机对阻塞任务进行拆分。RTC闹钟和软件定时器的回调
  * 函数里不能有阻塞。
  * 作者: LittleLeaf All rights reserved
- * 版本: V1.1.1
- * 修订日期: 2024 12 14
+ * 版本: V2.0.0
+ * 修订日期: 2025/02/25
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -31,7 +31,7 @@
  extern "C" {
 #endif
 
-#define LLOS_VERSION		"V1.1.1"
+#define LLOS_VERSION		"V2.0.0"
 
 #define LL_EVENT_MSG		(0x8000)
 
@@ -118,16 +118,30 @@ typedef ll_taskEvent_t 		(*ll_eventCB_t)(ll_taskId_t taskId, ll_taskEvent_t even
  * 描述: 初始化
  * 参数:
  *		system_reset_hook: 系统复位函数地址
- *		userDelayMs: 延时ms函数地址
- *		userDelayUs: 延时us函数地址
+ *		osDelayCB: os延时函数回调
+ *		mem_cfgLists: os内存配置
  ====================================================================================*/
 typedef void 				(*ll_system_reset_hook_t)(void);
 typedef void 				(*ll_userDelay_hook_t)(uint32_t time);
-void LLOS_Init(ll_system_reset_hook_t system_reset_hook, ll_userDelay_hook_t userDelayMs, ll_userDelay_hook_t userDelayUs);
+struct ll_init_delayCBs_t
+{
+	ll_userDelay_hook_t osDelayMs;
+	ll_userDelay_hook_t osDelayUs;
+};
+struct ll_init_memCfgs_t
+{
+	uint32_t *pPool;		/* 内存池地址 */
+	uint16_t poolSize;		/* 内存池大小 */
+	uint8_t taskNum;		/* 最大任务数量 */
+	uint8_t timerNum;		/* 最大定时器数量 */
+	uint8_t alarmNum;		/* 最大闹钟数量 */
+	uint8_t deviceNum;		/* 最大设备数量 */
+};
+void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs_t *osDelayCB, struct ll_init_memCfgs_t *memCfg);
 
 /*====================================================================================
  * 函数名: LLOS_Register_Events
- * 描述: 创建任务并为该任务注册事件回调函数，最大LL_TASK_NUM个任务，对应taskID为0x00-0xFE，0xFF保留
+ * 描述: 创建任务并为该任务注册事件回调函数
  * 参数:
  * 		ll_eventCB: 事件回调函数
  * 返回值: 创建的任务ID，任务ID值越小优先级越高，创建失败返回LL_ERR_INVALID
@@ -245,7 +259,7 @@ void LLOS_DelayUs(uint32_t time);
  * 函数名: LLOS_Timer_Set
  * 描述: OS提供的软件定时器，在LLOS_Tick_Increase()中执行，实时性相对较高
  * 参数:
- * 		timerN: 定时器ID，范围 0 - (LL_TIMER_NUM - 1)
+ * 		timerN: 定时器ID
  * 		newState: 是否启用该定时器
  * 		mode: 是否循环执行，false为只执行一次，true为重复执行
  * 		tick: 多少个tick执行一次
@@ -279,7 +293,7 @@ void LLOS_RTC_GetDate(void);
  * 		year: 范围2000-2099
  * 		rtcCB: 被执行的回调函数，传入NULL可以关闭闹钟，在LLOS_Tick_Increase()中执
  * 		行，实时性相对较高，该函数不要有阻塞
- * 		alarmN: 闹钟ID，范围 0 - (LL_ALARM_NUM - 1)
+ * 		alarmN: 闹钟ID
  *		alarmN: OS传入哪个闹钟调用了该回调函数
  * 返回值: 错误码
  ====================================================================================*/
@@ -290,9 +304,9 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 
 /*====================================================================================
  * 函数名: LLOS_malloc
- * 描述: 申请动态内存，最大值为LL_HEAP_SIZE
+ * 描述: 申请动态内存
  * 参数:
- * 		size: 要申请的动态内存大小
+ * 		size_t: 要申请的动态内存大小
  * 返回值: 申请到的动态内存首地址，失败返回NULL
  ====================================================================================*/
 void *LLOS_malloc(uint16_t size_t);
@@ -302,9 +316,15 @@ void *LLOS_malloc(uint16_t size_t);
  * 描述: 释放动态内存
  * 参数:
  * 		p: 要释放的内存首地址
- * 返回值: 是否成功释放
  ====================================================================================*/
 void LLOS_free(void *p);
+
+/*====================================================================================
+ * 函数名: LLOS_MemoryPool_GetSize
+ * 描述: 获取已使用的内存块数量
+ * 返回值: 已使用的内存块数量
+ ====================================================================================*/
+uint16_t LLOS_MemoryPool_GetSize(void);
 
 /*====================================================================================
  * 函数名: LLOS_Register_ErrorHandler
@@ -329,28 +349,39 @@ void LLOS_ErrorHandler(uint8_t errCode);
  ====================================================================================*/
 void LLOS_System_Reset(void);
 
+/*====================================================================================
+ * 函数名: LLOS_Register_LP
+ * 描述: 注册低功耗回调函数
+ * 参数:
+ * 		taskID: 当前执行到的taskID
+ * 		events: 当前执行到的events
+ * 		isLP: 低功耗状态
+ * 		LP_CB: 低功耗回调函数
+ ====================================================================================*/
+typedef void 				(*ll_LP_hook_t)(ll_taskId_t taskId, ll_taskEvent_t events, ll_newState_t isLP);
+void LLOS_Register_LP(ll_LP_hook_t LP_CB);
 
 /* =====================================[设备驱动框架]====================================== */
 typedef uint8_t 					ll_deviceId_t;
 
-typedef struct ll_device
+typedef struct ll_device_list
 {
 	const char *name;							/* 设备名称 */
     bool isOpen;								/* 设备打开标志 */
     ll_deviceId_t deviceId;						/* 设备ID, 0 - 254 */
 
-	ll_err_t (*initCB)   	(struct ll_device *dev, void *arg);
-	ll_err_t (*openCB)   	(struct ll_device *dev, uint32_t cmd);
-	ll_err_t (*closeCB)  	(struct ll_device *dev);
-	ll_err_t (*readCB)   	(struct ll_device *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
-	ll_err_t (*writeCB)  	(struct ll_device *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
-	ll_err_t (*write_readCB)(struct ll_device *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len);
-	uint32_t (*readPinCB)   (struct ll_device *dev, uint32_t pin);
-	ll_err_t (*writePinCB)  (struct ll_device *dev, uint32_t pin, ll_bit_t newState);
-	ll_err_t (*DMA_readCB)	(struct ll_device *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
-	ll_err_t (*DMA_writeCB)	(struct ll_device *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
-	ll_err_t (*ctrlCB)		(struct ll_device *dev, uint32_t cmd, void *args);
-}ll_device_t;
+	ll_err_t (*initCB)   	(struct ll_device_list *dev, void *arg);
+	ll_err_t (*openCB)   	(struct ll_device_list *dev, uint32_t cmd);
+	ll_err_t (*closeCB)  	(struct ll_device_list *dev);
+	ll_err_t (*readCB)   	(struct ll_device_list *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+	ll_err_t (*writeCB)  	(struct ll_device_list *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+	ll_err_t (*write_readCB)(struct ll_device_list *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len);
+	uint32_t (*readPinCB)   (struct ll_device_list *dev, uint32_t pin);
+	ll_err_t (*writePinCB)  (struct ll_device_list *dev, uint32_t pin, ll_bit_t newState);
+	ll_err_t (*DMA_readCB)	(struct ll_device_list *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+	ll_err_t (*DMA_writeCB)	(struct ll_device_list *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+	ll_err_t (*ctrlCB)		(struct ll_device_list *dev, uint32_t cmd, void *args);
+}ll_device_list_t;
 
 /*====================================================================================
  * 函数名: LLOS_Register_Device
@@ -359,7 +390,7 @@ typedef struct ll_device
  * 		dev: 设备句柄
  * 	返回值: 设备ID，注册失败返回LL_ERR_INVALID
  ====================================================================================*/
-ll_deviceId_t LLOS_Register_Device(ll_device_t *dev);
+ll_deviceId_t LLOS_Register_Device(ll_device_list_t *dev);
 
 /*====================================================================================
  * 函数名: LLOS_Device_GetNum
@@ -375,7 +406,7 @@ uint8_t LLOS_Device_GetNum(void);
  * 		name: 设备名称
  * 返回值: 设备句柄
  ====================================================================================*/
-ll_device_t *LLOS_Device_Find(const char *name);
+ll_device_list_t *LLOS_Device_Find(const char *name);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Init
@@ -385,7 +416,7 @@ ll_device_t *LLOS_Device_Find(const char *name);
  * 		arg: 参数
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg);
+ll_err_t LLOS_Device_Init(ll_device_list_t *dev, void *arg);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Open
@@ -395,7 +426,7 @@ ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg);
  * 		cmd: 命令
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd);
+ll_err_t LLOS_Device_Open(ll_device_list_t *dev, uint32_t cmd);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Close
@@ -404,7 +435,7 @@ ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd);
  * 		dev: 设备句柄
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Close(ll_device_t *dev);
+ll_err_t LLOS_Device_Close(ll_device_list_t *dev);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Read
@@ -417,7 +448,7 @@ ll_err_t LLOS_Device_Close(ll_device_t *dev);
  * 		len: 读取的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+ll_err_t LLOS_Device_Read(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Write
@@ -430,7 +461,7 @@ ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, v
  * 		len: 写入的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+ll_err_t LLOS_Device_Write(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_WriteRead
@@ -444,7 +475,7 @@ ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, 
  * 		len: 读写的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offset,
+ll_err_t LLOS_Device_WriteRead(ll_device_list_t *dev, uint32_t address, uint32_t offset,
 	const void *writeData, void *readData, uint32_t len);
 
 /*====================================================================================
@@ -455,7 +486,7 @@ ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offs
  * 		pin: 引脚
  * 返回值: 读取结果
  ====================================================================================*/
-uint32_t LLOS_Device_ReadPin(struct ll_device *dev, uint32_t pin);
+uint32_t LLOS_Device_ReadPin(ll_device_list_t *dev, uint32_t pin);
 
 /*====================================================================================
  * 函数名: LLOS_Device_WritePin
@@ -466,7 +497,7 @@ uint32_t LLOS_Device_ReadPin(struct ll_device *dev, uint32_t pin);
  * 		newState: 引脚状态
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_WritePin(struct ll_device *dev, uint32_t pin, ll_bit_t newState);
+ll_err_t LLOS_Device_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newState);
 
 /*====================================================================================
  * 函数名: LLOS_Device_DMARead
@@ -479,7 +510,7 @@ ll_err_t LLOS_Device_WritePin(struct ll_device *dev, uint32_t pin, ll_bit_t newS
  * 		len: 读取的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+ll_err_t LLOS_Device_DMARead(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_DMAWrite
@@ -492,7 +523,7 @@ ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset
  * 		len: 写入的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+ll_err_t LLOS_Device_DMAWrite(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Ctrl
@@ -503,13 +534,13 @@ ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offse
  * 		arg: 参数
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg);
+ll_err_t LLOS_Device_Ctrl(ll_device_list_t *dev, uint32_t cmd, void *arg);
 
 
 /* =====================================[指令解析框架]====================================== */
 typedef struct 
 {
-	char buffer[LL_CMD_BUFFER_LEN];
+	char *buffer;
 	uint32_t len;
 }cmd_t;
 struct cmdList_t
@@ -522,12 +553,13 @@ struct cmdList_t
  * 函数名: LLOS_Cmd_Init
  * 描述: 指令解析初始化，*IDN?指令激活
  * 参数:
+ *		bufSize: 给指令解析缓冲区的大小
  * 		vid: 厂商字符串
  * 		pid: 产品字符串
  * 		version: 版本号
  *		sn: 唯一序列号
  ====================================================================================*/
-void LLOS_Cmd_Init(const char *vid, const char *pid, const char *version, const char *sn);
+void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const char *version, const char *sn);
 
 /*====================================================================================
  * 函数名: LLOS_Cmd_Input

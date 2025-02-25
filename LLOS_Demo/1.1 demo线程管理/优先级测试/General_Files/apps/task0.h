@@ -22,6 +22,4 @@
 
 void Task0_Init(void);
 
-extern ll_taskId_t task0Id;
-
 #endif

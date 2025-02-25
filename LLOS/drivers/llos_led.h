@@ -2,8 +2,8 @@
  * LED(GPIO输出)驱动，支持无阻塞的LED开关，特定闪烁次数、占空比和时长的LED控制，
  * 默认低电平有效。
  * 作者: LittleLeaf All rights reserved
- * 版本: V1.0.2
- * 修订日期: 2024 12 14
+ * 版本: V2.0.0
+ * 修订日期: 2025/02/21
  * 基础使用步骤:
  * 1) 初始化调用LLOS_LED_Init
  * 2) 使用相关API控制LED
@@ -33,8 +33,9 @@ typedef enum
  * 参数:
  * 		ms: 毫秒，LED的轮询周期，一般为10
  *		timerN: 使用的OS定时器ID
+ *		ledNum: 最大LED数量
  ====================================================================================*/
-void LLOS_LED_Init(uint16_t ms, uint8_t timerN);
+void LLOS_LED_Init(uint16_t ms, uint8_t timerN, uint8_t ledNum);
 
 /*====================================================================================
  * 函数名: LLOS_LED_Set

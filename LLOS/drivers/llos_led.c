@@ -15,14 +15,26 @@ struct ledList_t
 
 static uint8_t i;
 static uint16_t ledTaskPeriod;
-static uint8_t ledIndex;
-static struct ledList_t ledList[LL_LED_NUM];
+static uint8_t ledIndex, ll_ledNum;
+static struct ledList_t *ledList;
 
 static void LLOS_LED_Tick(uint8_t timerN);
 
-void LLOS_LED_Init(uint16_t ms, uint8_t timerN)
+void LLOS_LED_Init(uint16_t ms, uint8_t timerN, uint8_t ledNum)
 {
+	uint32_t size;
 	ledTaskPeriod = ms;
+	ll_ledNum = ledNum;
+	
+	size = sizeof(struct ledList_t) * ll_ledNum;
+	ledList = LLOS_malloc(size);
+	if(ledList == NULL && ll_ledNum != 0)
+	{
+		LOG_E("LLOS_LED_Init ", "ledList malloc null!\r\n");
+		while(1);
+	}
+	memset(ledList, 0, size);
+	
 	LLOS_Timer_Set(timerN, ll_enable, true, LLOS_Ms_To_Tick(ledTaskPeriod), LLOS_LED_Tick);
 }
 
@@ -32,7 +44,7 @@ void LLOS_LED_Set(ll_IO_t port, uint32_t ledN, ll_led_t mode)
 	ll_IO_t *temp = (ll_IO_t *)port;
 
 	/* 关闭正在在闪烁的LED */
-	for(i = 0; i < LL_LED_NUM; i++)
+	for(i = 0; i < ll_ledNum; i++)
 	{
 		if(ledList[i].port == port && ledList[i].ledN == ledN)
 		{
@@ -70,7 +82,7 @@ void LLOS_LED_Set(ll_IO_t port, uint32_t ledN, ll_led_t mode)
 void LLOS_LED_Blink(ll_IO_t port, uint32_t ledN, uint8_t num, uint8_t duty, uint16_t ms)
 {
 	/* 如果被操作的LED已经在列表中 */
-	for(i = 0; i < LL_LED_NUM; i++)
+	for(i = 0; i < ll_ledNum; i++)
 	{
 		if(ledList[i].port == port && ledList[i].ledN == ledN)
 		{
@@ -85,7 +97,7 @@ void LLOS_LED_Blink(ll_IO_t port, uint32_t ledN, uint8_t num, uint8_t duty, uint
 	}
 	
 	/* 如果被操作的LED没有在列表中则创建一个 */
-	if(ledIndex >= LL_LED_NUM)
+	if(ledIndex >= ll_ledNum)
 	{
 		LOG_E("LLOS_LED_Blink: ", "> LL_LED_NUM!\r\n");
 		return;
@@ -104,7 +116,7 @@ void LLOS_LED_Blink(ll_IO_t port, uint32_t ledN, uint8_t num, uint8_t duty, uint
 static void LLOS_LED_Tick(uint8_t timerN)
 {
 	ll_IO_t *temp;
-	for(i = 0; i < LL_LED_NUM; i++)
+	for(i = 0; i < ll_ledNum; i++)
 	{
 		if(ledList[i].port == 0 || ledList[i].ledN == 0 || ledList[i].num == 0)continue;
 		

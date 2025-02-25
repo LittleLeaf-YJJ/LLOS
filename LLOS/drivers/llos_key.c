@@ -12,36 +12,72 @@ typedef enum
 struct FSM_value_t
 {
     FSM_state_t state;
-    ll_keyEvent_t event;
+    enum ll_keyEvent_t event;
     uint32_t pinState;
     uint16_t pressTime;
     uint8_t flag;
 };
 
-static uint8_t i;
+static uint8_t i, ll_keyNum;
+static uint16_t ll_overTime, ll_longPressTime;
 static uint16_t keyTaskPeriod;
-static struct FSM_value_t FSM_value[LL_KEY_PORT_NUM];
 static ll_keyCB_t keyChangeCB;
 
-struct ll_keyWhich_t ll_keyWhich[LL_KEY_PORT_NUM] = {0};
-ll_keyConfig_t ll_keyConfig[LL_KEY_PORT_NUM];
+struct ll_keyWhich_t *ll_keyWhich = NULL;
+static struct ll_keyConfig_t *ll_keyConfig;
+static struct FSM_value_t *FSM_value;
 
 static void LLOS_Key_Tick(uint8_t timerN);
 
-void LLOS_Key_Init(uint16_t ms, uint8_t timerN)
+void LLOS_Key_Init(uint16_t ms, uint8_t timerN, uint8_t keyNum, struct ll_keyConfig_t *keyConfig, ll_keyCB_t keyCB, uint16_t overTime, uint16_t longPressTime)
 {
+	uint32_t size;
+	
 	keyTaskPeriod = ms;
-	LLOS_Timer_Set(timerN, ll_enable, true, LLOS_Ms_To_Tick(keyTaskPeriod), LLOS_Key_Tick);
-}
-
-void LLOS_Key_RegisterCB(ll_keyCB_t keyCB)
-{
 	keyChangeCB = keyCB;
+	
+	if(keyNum <= 0 || overTime <= 0 || longPressTime <= 0 || keyConfig == NULL)
+	{
+		LOG_E("LLOS_LED_Init ", "para error!\r\n");
+		while(1);		
+	}
+	
+	ll_keyNum = keyNum;
+	ll_overTime = overTime;
+	ll_longPressTime = longPressTime;
+	
+	size = sizeof(struct ll_keyWhich_t) * ll_keyNum;
+	ll_keyWhich = LLOS_malloc(size);
+	if(ll_keyWhich == NULL)
+	{
+		LOG_E("LLOS_LED_Init ", "keyWhich malloc null!\r\n");
+		while(1);
+	}
+	
+	size = sizeof(struct ll_keyConfig_t) * ll_keyNum;
+	ll_keyConfig = LLOS_malloc(size);
+	if(ll_keyConfig == NULL)
+	{
+		LOG_E("LLOS_LED_Init ", "keyConfig malloc null!\r\n");
+		while(1);
+	}
+	memcpy(ll_keyConfig, keyConfig, size);
+	
+	size = sizeof(struct FSM_value_t) * ll_keyNum;
+	FSM_value = LLOS_malloc(size);
+	if(FSM_value == NULL)
+	{
+		LOG_E("LLOS_LED_Init ", "FSM_value malloc null!\r\n");
+		while(1);
+	}
+	memset(FSM_value, 0, size);
+	
+	LLOS_Timer_Set(timerN, ll_enable, true, LLOS_Ms_To_Tick(keyTaskPeriod), LLOS_Key_Tick);
 }
 
 static void LLOS_Key_Tick(uint8_t timerN)
 {
-	for(i = 0; i < LL_KEY_PORT_NUM; i++)
+	for(i = 0; i < ll_keyNum; i++)
 	{
 		if(ll_keyConfig[i].port == 0 || ll_keyConfig[i].pinMask == 0)continue;
 		switch(FSM_value[i].state)
@@ -65,12 +101,12 @@ static void LLOS_Key_Tick(uint8_t timerN)
 				{
 					FSM_value[i].flag = ll_set;
 					/* 弹起超过LL_KEY_OVER_TIMEms则认为按键检测结束 */
-					if(FSM_value[i].pressTime >= (ll_keyWhich[i].pressTime + LL_KEY_OVER_TIME))
+					if(FSM_value[i].pressTime >= (ll_keyWhich[i].pressTime + ll_overTime))
 					{
 						FSM_value[i].flag = ll_reset;
 						FSM_value[i].state = FSM_keyUp;					/* 状态机进入按键弹起状态 */
 						ll_keyWhich[i].event = FSM_value[i].event;		/* 保存事件 */
-						if(ll_keyWhich[i].pressTime > LL_KEY_LONG_PRESS_TIME)
+						if(ll_keyWhich[i].pressTime > ll_longPressTime)
 						{
 							ll_keyWhich[i].event = ll_key_event_LongPress;/* 保存按键长按事件 */
 						}
