@@ -543,6 +543,11 @@ typedef struct
 	char *buffer;
 	uint32_t len;
 }cmd_t;
+struct cmdList_t
+{
+	const char *pattern;
+	ll_err_t (*callback)(cmd_t *context);
+};
 
 /*====================================================================================
  * 函数名: LLOS_Cmd_Init
