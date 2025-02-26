@@ -48,7 +48,7 @@ static struct ll_eventCB_list_t *eventCB_list;
 static void const **msg_list;
 static struct ll_timerCB_list_t *timerCB_list;
 static struct ll_alarm_list_t *alarm_list;
-static ll_device_list_t *device_list;
+static ll_device_t *device_list;
 static cmd_t context;
 
 struct ll_calendar_t ll_calendar;
@@ -116,11 +116,11 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	}
 	memset(alarm_list, 0, size);
 	
-	size = sizeof(ll_device_list_t) * ll_memCfgs.deviceNum;
+	size = sizeof(ll_device_t) * ll_memCfgs.deviceNum;
 	device_list = LLOS_malloc(size);
 	if(device_list == NULL && ll_memCfgs.deviceNum != 0)
 	{
-		LOG_E("LLOS_Init ", "ll_device_list malloc null!\r\n");
+		LOG_E("LLOS_Init ", "device_list malloc null!\r\n");
 		while(1);
 	}
 	memset(device_list, 0, size);
@@ -618,7 +618,7 @@ void LLOS_Register_LP(ll_LP_hook_t LP_CB)
 }
 
 /* =====================================[设备驱动框架]====================================== */
-ll_deviceId_t LLOS_Register_Device(ll_device_list_t *dev)
+ll_deviceId_t LLOS_Register_Device(ll_device_t *dev)
 {
 	if(deviceIndex >= ll_memCfgs.deviceNum)
 	{
@@ -651,7 +651,7 @@ uint8_t LLOS_Device_GetNum(void)
 	return deviceIndex;
 }
 
-ll_device_list_t *LLOS_Device_Find(const char *name)
+ll_device_t *LLOS_Device_Find(const char *name)
 {
 	for(ll_deviceId_t i = 0; i < ll_memCfgs.deviceNum; i++)
 	{
@@ -663,7 +663,7 @@ ll_device_list_t *LLOS_Device_Find(const char *name)
 	return NULL;
 }
 
-ll_err_t LLOS_Device_Init(ll_device_list_t *dev, void *arg)
+ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg)
 {
 	if(dev == NULL || dev->initCB == NULL)
 	{
@@ -672,7 +672,7 @@ ll_err_t LLOS_Device_Init(ll_device_list_t *dev, void *arg)
 	}
 	return dev->initCB(dev, arg);
 }
-ll_err_t LLOS_Device_Open(ll_device_list_t *dev, uint32_t cmd)
+ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd)
 {
 	if(dev == NULL || dev->openCB == NULL)
 	{
@@ -682,7 +682,7 @@ ll_err_t LLOS_Device_Open(ll_device_list_t *dev, uint32_t cmd)
 	dev->isOpen  = true;
 	return dev->openCB(dev, cmd);
 }
-ll_err_t LLOS_Device_Close(ll_device_list_t *dev)
+ll_err_t LLOS_Device_Close(ll_device_t *dev)
 {
 	if(dev == NULL || dev->closeCB == NULL)
 	{
@@ -692,7 +692,7 @@ ll_err_t LLOS_Device_Close(ll_device_list_t *dev)
 	dev->isOpen  = false;
 	return dev->closeCB(dev);
 }
-ll_err_t LLOS_Device_Read(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
+ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->readCB == NULL)
 	{
@@ -701,7 +701,7 @@ ll_err_t LLOS_Device_Read(ll_device_list_t *dev, uint32_t address, uint32_t offs
 	}
 	return dev->readCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_Write(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
+ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->writeCB == NULL)
 	{
@@ -710,7 +710,7 @@ ll_err_t LLOS_Device_Write(ll_device_list_t *dev, uint32_t address, uint32_t off
 	}
 	return dev->writeCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_WriteRead(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len)
+ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len)
 {
 	if(dev == NULL || dev->write_readCB == NULL)
 	{
@@ -719,7 +719,7 @@ ll_err_t LLOS_Device_WriteRead(ll_device_list_t *dev, uint32_t address, uint32_t
 	}
 	return dev->write_readCB(dev, address, offset, writeData, readData, len);
 }
-uint32_t LLOS_Device_ReadPin(ll_device_list_t *dev, uint32_t pin)
+uint32_t LLOS_Device_ReadPin(ll_device_t *dev, uint32_t pin)
 {
 	if(dev == NULL || dev->readPinCB == NULL)
 	{
@@ -728,7 +728,7 @@ uint32_t LLOS_Device_ReadPin(ll_device_list_t *dev, uint32_t pin)
 	}
 	return dev->readPinCB(dev, pin);
 }
-ll_err_t LLOS_Device_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newState)
+ll_err_t LLOS_Device_WritePin(ll_device_t *dev, uint32_t pin, ll_bit_t newState)
 {
 	if(dev == NULL || dev->writePinCB == NULL)
 	{
@@ -737,7 +737,7 @@ ll_err_t LLOS_Device_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newS
 	}
 	return dev->writePinCB(dev, pin, newState);
 }
-ll_err_t LLOS_Device_DMARead(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
+ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->DMA_readCB == NULL)
 	{
@@ -746,7 +746,7 @@ ll_err_t LLOS_Device_DMARead(ll_device_list_t *dev, uint32_t address, uint32_t o
 	}
 	return dev->DMA_readCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_DMAWrite(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
+ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len)
 {
 	if(dev == NULL || dev->DMA_writeCB == NULL)
 	{
@@ -755,7 +755,7 @@ ll_err_t LLOS_Device_DMAWrite(ll_device_list_t *dev, uint32_t address, uint32_t 
 	}
 	return dev->DMA_writeCB(dev, address, offset, buffer, len);
 }
-ll_err_t LLOS_Device_Ctrl(ll_device_list_t *dev, uint32_t cmd, void *arg)
+ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg)
 {
 	if(dev == NULL || dev->ctrlCB == NULL)
 	{

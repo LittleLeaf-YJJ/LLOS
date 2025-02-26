@@ -26,7 +26,7 @@ static ll_taskEvent_t Task_DS18B20_Events(ll_taskId_t taskId, ll_taskEvent_t eve
 void Task_DS18B20_Init(void)
 {
 	ll_err_t err;
-	ll_device_list_t *devDS18B20;
+	ll_device_t *devDS18B20;
 	
 	devDS18B20 = LLOS_Device_Find(PORT_DS18B20);
 	if(devDS18B20 == NULL)

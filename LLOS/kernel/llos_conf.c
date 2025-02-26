@@ -7,6 +7,12 @@
 extern ll_err_t LLOS_Cmd_IDN(cmd_t *context);
 extern ll_err_t LLOS_Cmd_RST(cmd_t *context);
 
+struct cmdList_t
+{
+	const char *pattern;
+	ll_err_t (*callback)(cmd_t *context);
+};
+
 ll_err_t LLOS_Cmd_Test(cmd_t *context)
 {
 	/* 测试指令 *Test FALSE,2.66mV,-2kA,"Hello world!" */

@@ -2,12 +2,12 @@
 #include "hal_gpio.h"
 #include "gpio.h"
 
-static ll_err_t HW_GPIOA_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newState);
-static uint32_t HW_GPIOA_ReadPin(ll_device_list_t *dev, uint32_t pin);
+static ll_err_t HW_GPIOA_WritePin(ll_device_t *dev, uint32_t pin, ll_bit_t newState);
+static uint32_t HW_GPIOA_ReadPin(ll_device_t *dev, uint32_t pin);
 
 void LLOS_Device_Register_GPIO(void)
 {
-	ll_device_list_t dev = {0};
+	ll_device_t dev = {0};
 
 	dev.name = "GPIOA";
 	dev.writePinCB = HW_GPIOA_WritePin;
@@ -20,12 +20,12 @@ void LLOS_Device_Register_GPIO(void)
 	}
 }
 
-static ll_err_t HW_GPIOA_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newState)
+static ll_err_t HW_GPIOA_WritePin(ll_device_t *dev, uint32_t pin, ll_bit_t newState)
 {
 	HAL_GPIO_WritePin(GPIOA, pin, (GPIO_PinState)newState);
 	return LL_ERR_SUCCESS;
 }
-static uint32_t HW_GPIOA_ReadPin(ll_device_list_t *dev, uint32_t pin)
+static uint32_t HW_GPIOA_ReadPin(ll_device_t *dev, uint32_t pin)
 {
 	return HAL_GPIO_ReadPin(GPIOA, pin);
 }

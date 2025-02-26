@@ -38,7 +38,7 @@ enum ll_DS18B20_CMD_Resolution_t
 
 struct ll_DS18B20_hw_t
 {
-	ll_device_list_t *devGPIO;
+	ll_device_t *devGPIO;
 	uint32_t pinDQ;
 };
 

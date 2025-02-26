@@ -49,9 +49,9 @@ struct ll_SSD1306_screenConf_t
 };
 struct ll_SSD1306_conf_t
 {
-	ll_device_list_t *devSPI_I2C;					/* SPI/I2C设备 */
-	ll_device_list_t *devDC;						/* DC所使用的GPIO设备，I2C模式下必须为NULL */
-	ll_device_list_t *devCS;						/* CS所使用的GPIO设备 */
+	ll_device_t *devSPI_I2C;					/* SPI/I2C设备 */
+	ll_device_t *devDC;						/* DC所使用的GPIO设备，I2C模式下必须为NULL */
+	ll_device_t *devCS;						/* CS所使用的GPIO设备 */
 	uint32_t pinDC;									/* DC所使用的引脚 */
 	uint32_t pinCSorAddr;							/* CS所使用的引脚或I2C地址 */
 

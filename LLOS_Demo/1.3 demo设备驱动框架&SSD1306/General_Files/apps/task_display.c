@@ -14,7 +14,7 @@ static uint8_t pic7[];
 static uint8_t pic8[];
 
 static ll_taskId_t taskDisplayId = LL_ERR_INVALID;
-static ll_device_list_t *devGPIOA, *devSPI1, *devI2C2;
+static ll_device_t *devGPIOA, *devSPI1, *devI2C2;
 
 static ll_taskEvent_t Task0_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 {

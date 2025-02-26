@@ -535,14 +535,14 @@
               <FilePath>..\..\..\LLOS\drivers\llos_key.c</FilePath>
             </File>
             <File>
-              <FileName>llos_led.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\LLOS\drivers\llos_led.c</FilePath>
-            </File>
-            <File>
               <FileName>llos_fifo.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\LLOS\drivers\llos_fifo.c</FilePath>
+            </File>
+            <File>
+              <FileName>llos_led.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\LLOS\drivers\llos_led.c</FilePath>
             </File>
           </Files>
         </Group>

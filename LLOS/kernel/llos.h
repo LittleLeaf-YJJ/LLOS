@@ -364,24 +364,24 @@ void LLOS_Register_LP(ll_LP_hook_t LP_CB);
 /* =====================================[设备驱动框架]====================================== */
 typedef uint8_t 					ll_deviceId_t;
 
-typedef struct ll_device_list
+typedef struct ll_device
 {
 	const char *name;							/* 设备名称 */
     bool isOpen;								/* 设备打开标志 */
     ll_deviceId_t deviceId;						/* 设备ID, 0 - 254 */
 
-	ll_err_t (*initCB)   	(struct ll_device_list *dev, void *arg);
-	ll_err_t (*openCB)   	(struct ll_device_list *dev, uint32_t cmd);
-	ll_err_t (*closeCB)  	(struct ll_device_list *dev);
-	ll_err_t (*readCB)   	(struct ll_device_list *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
-	ll_err_t (*writeCB)  	(struct ll_device_list *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
-	ll_err_t (*write_readCB)(struct ll_device_list *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len);
-	uint32_t (*readPinCB)   (struct ll_device_list *dev, uint32_t pin);
-	ll_err_t (*writePinCB)  (struct ll_device_list *dev, uint32_t pin, ll_bit_t newState);
-	ll_err_t (*DMA_readCB)	(struct ll_device_list *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
-	ll_err_t (*DMA_writeCB)	(struct ll_device_list *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
-	ll_err_t (*ctrlCB)		(struct ll_device_list *dev, uint32_t cmd, void *args);
-}ll_device_list_t;
+	ll_err_t (*initCB)   	(struct ll_device *dev, void *arg);
+	ll_err_t (*openCB)   	(struct ll_device *dev, uint32_t cmd);
+	ll_err_t (*closeCB)  	(struct ll_device *dev);
+	ll_err_t (*readCB)   	(struct ll_device *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+	ll_err_t (*writeCB)  	(struct ll_device *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+	ll_err_t (*write_readCB)(struct ll_device *dev, uint32_t address, uint32_t offset, const void *writeData, void *readData, uint32_t len);
+	uint32_t (*readPinCB)   (struct ll_device *dev, uint32_t pin);
+	ll_err_t (*writePinCB)  (struct ll_device *dev, uint32_t pin, ll_bit_t newState);
+	ll_err_t (*DMA_readCB)	(struct ll_device *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+	ll_err_t (*DMA_writeCB)	(struct ll_device *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+	ll_err_t (*ctrlCB)		(struct ll_device *dev, uint32_t cmd, void *args);
+}ll_device_t;
 
 /*====================================================================================
  * 函数名: LLOS_Register_Device
@@ -390,7 +390,7 @@ typedef struct ll_device_list
  * 		dev: 设备句柄
  * 	返回值: 设备ID，注册失败返回LL_ERR_INVALID
  ====================================================================================*/
-ll_deviceId_t LLOS_Register_Device(ll_device_list_t *dev);
+ll_deviceId_t LLOS_Register_Device(ll_device_t *dev);
 
 /*====================================================================================
  * 函数名: LLOS_Device_GetNum
@@ -406,7 +406,7 @@ uint8_t LLOS_Device_GetNum(void);
  * 		name: 设备名称
  * 返回值: 设备句柄
  ====================================================================================*/
-ll_device_list_t *LLOS_Device_Find(const char *name);
+ll_device_t *LLOS_Device_Find(const char *name);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Init
@@ -416,7 +416,7 @@ ll_device_list_t *LLOS_Device_Find(const char *name);
  * 		arg: 参数
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Init(ll_device_list_t *dev, void *arg);
+ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Open
@@ -426,7 +426,7 @@ ll_err_t LLOS_Device_Init(ll_device_list_t *dev, void *arg);
  * 		cmd: 命令
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Open(ll_device_list_t *dev, uint32_t cmd);
+ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Close
@@ -435,7 +435,7 @@ ll_err_t LLOS_Device_Open(ll_device_list_t *dev, uint32_t cmd);
  * 		dev: 设备句柄
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Close(ll_device_list_t *dev);
+ll_err_t LLOS_Device_Close(ll_device_t *dev);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Read
@@ -448,7 +448,7 @@ ll_err_t LLOS_Device_Close(ll_device_list_t *dev);
  * 		len: 读取的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Read(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Write
@@ -461,7 +461,7 @@ ll_err_t LLOS_Device_Read(ll_device_list_t *dev, uint32_t address, uint32_t offs
  * 		len: 写入的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Write(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_WriteRead
@@ -475,7 +475,7 @@ ll_err_t LLOS_Device_Write(ll_device_list_t *dev, uint32_t address, uint32_t off
  * 		len: 读写的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_WriteRead(ll_device_list_t *dev, uint32_t address, uint32_t offset,
+ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offset,
 	const void *writeData, void *readData, uint32_t len);
 
 /*====================================================================================
@@ -486,7 +486,7 @@ ll_err_t LLOS_Device_WriteRead(ll_device_list_t *dev, uint32_t address, uint32_t
  * 		pin: 引脚
  * 返回值: 读取结果
  ====================================================================================*/
-uint32_t LLOS_Device_ReadPin(ll_device_list_t *dev, uint32_t pin);
+uint32_t LLOS_Device_ReadPin(ll_device_t *dev, uint32_t pin);
 
 /*====================================================================================
  * 函数名: LLOS_Device_WritePin
@@ -497,7 +497,7 @@ uint32_t LLOS_Device_ReadPin(ll_device_list_t *dev, uint32_t pin);
  * 		newState: 引脚状态
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newState);
+ll_err_t LLOS_Device_WritePin(ll_device_t *dev, uint32_t pin, ll_bit_t newState);
 
 /*====================================================================================
  * 函数名: LLOS_Device_DMARead
@@ -510,7 +510,7 @@ ll_err_t LLOS_Device_WritePin(ll_device_list_t *dev, uint32_t pin, ll_bit_t newS
  * 		len: 读取的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_DMARead(ll_device_list_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
+ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_DMAWrite
@@ -523,7 +523,7 @@ ll_err_t LLOS_Device_DMARead(ll_device_list_t *dev, uint32_t address, uint32_t o
  * 		len: 写入的长度
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_DMAWrite(ll_device_list_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
+ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offset, const void *buffer, uint32_t len);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Ctrl
@@ -534,7 +534,7 @@ ll_err_t LLOS_Device_DMAWrite(ll_device_list_t *dev, uint32_t address, uint32_t 
  * 		arg: 参数
  * 返回值: 错误码
  ====================================================================================*/
-ll_err_t LLOS_Device_Ctrl(ll_device_list_t *dev, uint32_t cmd, void *arg);
+ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg);
 
 
 /* =====================================[指令解析框架]====================================== */
@@ -543,11 +543,6 @@ typedef struct
 	char *buffer;
 	uint32_t len;
 }cmd_t;
-struct cmdList_t
-{
-	const char *pattern;
-	ll_err_t (*callback)(cmd_t *context);
-};
 
 /*====================================================================================
  * 函数名: LLOS_Cmd_Init
