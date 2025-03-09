@@ -3,6 +3,8 @@
 
 #include <llos_DS18B20.h>
 
+#define TASK_DS18B20_EVENT_LOOP		LL_EVENT(0)
+
 static ll_taskId_t taskDS18B20Id = LL_ERR_INVALID;
 
 static ll_taskEvent_t Task_DS18B20_Events(ll_taskId_t taskId, ll_taskEvent_t events)

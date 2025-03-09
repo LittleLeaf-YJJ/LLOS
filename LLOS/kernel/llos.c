@@ -1052,18 +1052,6 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
 	
 	Trim(context->buffer);
 	
-	if((strncasecmp("MAX", context->buffer, 3) == 0) || (strncasecmp("MIN", context->buffer, 3) == 0))
-	{
-		if(copy_len < 4)
-		{
-			LOG_E("LLOS_Cmd_ParamCopyText: ", "copy len < 4!\r\n");
-			return LL_ERR_FAILED;
-		}
-		strncpy(text, context->buffer, 3);
-		text[3] = '\0';
-		return LL_ERR_SUCCESS;
-	}
-	
     char *start = strchr(context->buffer, '"');
     char *end;
 
@@ -1092,4 +1080,25 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
     text[textLen] = '\0';
     
     return LL_ERR_SUCCESS;
+}
+
+void LLOS_Cmd_ResultBool(bool val)
+{
+	cmd_printf("%d\r\n", val);
+}
+void LLOS_Cmd_ResultFloat(float val)
+{
+	cmd_printf("%f\r\n", val);
+}
+void LLOS_Cmd_ResultInt32(int32_t val)
+{
+	cmd_printf("%d\r\n", val);
+}
+void LLOS_Cmd_ResultUInt32(uint32_t val)
+{
+	cmd_printf("%u\r\n", val);
+}
+void LLOS_Cmd_ResultText(char *val)
+{
+	cmd_printf("%s\r\n", val);
 }

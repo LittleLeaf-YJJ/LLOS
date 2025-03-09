@@ -3,11 +3,11 @@
 
 #include <llos.h>
 
-#define TASK0_EVENT1	0x0001
-#define TASK0_EVENT2	0x0002
-#define TASK0_EVENT3	0x0004
-#define TASK0_EVENT4	0x0008
-#define TASK0_EVENT5	0x0010
+#define TASK0_EVENT1	LL_EVENT(0)
+#define TASK0_EVENT2	LL_EVENT(1)
+#define TASK0_EVENT3	LL_EVENT(2)
+#define TASK0_EVENT4	LL_EVENT(3)
+#define TASK0_EVENT5	LL_EVENT(4)
 
 void Task0_Init(void);
 

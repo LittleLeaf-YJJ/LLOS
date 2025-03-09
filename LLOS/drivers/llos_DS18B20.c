@@ -141,7 +141,6 @@ uint64_t LLOS_DS18B20_ReadROM(void)
 
 ll_newState_t LLOS_DS18B20_GetAlarm(void)
 {
-    uint8_t var;
 	ll_newState_t flag = false;
 	
 	busy = true;
@@ -253,8 +252,6 @@ static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 
 ll_err_t LLOS_DS18B20_WriteEEPROM(void)
 {
-	uint8_t cfg;
-	
 	busy = true;
     if(!LLOS_DS18B20_RST())
     {

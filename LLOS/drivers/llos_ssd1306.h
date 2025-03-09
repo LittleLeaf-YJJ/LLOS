@@ -1,10 +1,8 @@
 /*
  * SSD1306/CH1115以及兼容的屏幕驱动
  * 作者: LittleLeaf All rights reserved
- * 版本: V2.0.0
- * 修订日期: 2025/02/25
- * 备注：
- * 不要勾选 'Plain Char is Signed'
+ * 版本: V2.0.1
+ * 修订日期: 2025/03/08
  */
 #ifndef __LLOS_SSD1306_H
 #define __LLOS_SSD1306_H
@@ -49,9 +47,9 @@ struct ll_SSD1306_screenConf_t
 };
 struct ll_SSD1306_conf_t
 {
-	ll_device_t *devSPI_I2C;					/* SPI/I2C设备 */
-	ll_device_t *devDC;						/* DC所使用的GPIO设备，I2C模式下必须为NULL */
-	ll_device_t *devCS;						/* CS所使用的GPIO设备 */
+	ll_device_t *devSPI_I2C;						/* SPI/I2C设备 */
+	ll_device_t *devDC;								/* DC所使用的GPIO设备，I2C模式下必须为NULL */
+	ll_device_t *devCS;								/* CS所使用的GPIO设备 */
 	uint32_t pinDC;									/* DC所使用的引脚 */
 	uint32_t pinCSorAddr;							/* CS所使用的引脚或I2C地址 */
 
@@ -143,11 +141,11 @@ void LLOS_SSD1306_GetSize(uint16_t *w, uint16_t *h);
  * 描述: 显示数字带格式控制
  * 参数:
  *		x, y：x(0-127), y(0-7)
- * 		num: 要显示的数字
- * 		str: 格式控制符
+ * 		num: 要显示的数字，根据format自动确认类型
+ * 		format: 格式控制符
  *		sizeFont：字体尺寸
  ====================================================================================*/
-void LLOS_SSD1306_ShowNumFormat(uint16_t x, uint16_t y, uint32_t num, const char *str, enum ll_SSD1306_sizeFont_t sizeFont);
+void LLOS_SSD1306_ShowNumFormat(uint16_t x, uint16_t y, float num, const char *format, enum ll_SSD1306_sizeFont_t sizeFont);
 
 /*====================================================================================
  * 函数名: LLOS_SSD1306_ShowString
@@ -162,45 +160,7 @@ void LLOS_SSD1306_ShowString(uint16_t x, uint16_t y, const char *str);
  * 函数名: LLOS_SSD1306_DrawDot
  * 描述: 画点
  ====================================================================================*/
-void LLOS_SSD1306_DrawDot(uint16_t x, uint16_t y);
-
-/*====================================================================================
- * 函数名: LLOS_SSD1306_DrawLine
- * 描述: 画线
- ====================================================================================*/
-void LLOS_SSD1306_DrawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-
-/*====================================================================================
- * 函数名: LLOS_SSD1306_DrawRectangle
- * 描述: 画矩形
- * 参数:
- *		isFill：是否填充
- ====================================================================================*/
-void LLOS_SSD1306_DrawRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ll_newState_t isFill);
-
-/*====================================================================================
- * 函数名: LLOS_SSD1306_DrawRoundedRectangle
- * 描述: 画圆角矩形
- * 参数:
- *		isFill：是否填充
- ====================================================================================*/
-void LLOS_SSD1306_DrawRoundedRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t r, ll_newState_t isFill);
-
-/*====================================================================================
- * 函数名: LLOS_SSD1306_DrawCircle
- * 描述: 画圆形
- * 参数:
- *		isFill：是否填充
- ====================================================================================*/
-void LLOS_SSD1306_DrawCircle(uint16_t x, uint16_t y, uint16_t r, ll_newState_t isFill);
-
-/*====================================================================================
- * 函数名: LLOS_SSD1306_DrawTriangle
- * 描述: 画三角形
- * 参数:
- *		isFill：是否填充
- ====================================================================================*/
-void LLOS_SSD1306_DrawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, ll_newState_t isFill);
+void LLOS_SSD1306_DrawDot(uint16_t x, uint16_t y, uint16_t dummy);
 
 #ifdef __cplusplus
  }

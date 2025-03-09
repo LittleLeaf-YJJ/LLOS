@@ -279,28 +279,64 @@ static void LLOS_SSD1306_ShowStr(uint16_t x, uint16_t y, const char *str, enum l
 	}
 }
 
-void LLOS_SSD1306_ShowNumFormat(uint16_t x, uint16_t y, uint32_t num, const char *str, enum ll_SSD1306_sizeFont_t sizeFont)
+void LLOS_SSD1306_ShowNumFormat(uint16_t x, uint16_t y, float num, const char *format, enum ll_SSD1306_sizeFont_t sizeFont)
 {
-    char s[100];
-    sprintf(s, str, num);//整形转十六进制（字符串格式化）
+    char s[100], *p;
+	bool isFloat = false;
+	uint8_t i = 0;
+	
+	p = (char *)format;
+	while(*p++)
+	{
+		if(format[i] == '%' && format[i+1] == 'f')
+		{
+			isFloat = true;
+			break;
+		}
+		else if(format[i] == '%' && format[i+1] == '.' && format[i+3] == 'f')
+		{
+			isFloat = true;
+			break;
+		}
+		else
+		{
+			isFloat = false;
+		}
+		
+		i++;
+	}
+	
+    if(isFloat)
+	{
+		sprintf(s, format, num);
+	}
+	else
+	{
+        int32_t i = (int32_t)num;
+        sprintf(s, format, i);
+    }
+	
     LLOS_SSD1306_ShowStr(x, y, s, sizeFont);
 }
+
 void LLOS_SSD1306_ShowString(uint16_t x, uint16_t y, const char *str)
 {
+	const unsigned char *s = (const unsigned char *)str;
+	
 #ifdef ll_SSD1306_font_CN1616
 	uint8_t chinese_num = sizeof(ll_SSD1306_font_CN16x16) / sizeof(ll_SSD1306_font_CN_t); /* 计算字库字符数 */
 	uint8_t index,i;
 #endif
-	while(*str != '\0')
+	while(*s != '\0')
 	{
-		if(*str == '\r' && *(str + 1) == '\n')
+		if(*s == '\r' && *(s + 1) == '\n')
 		{
 			y += 2; /* 换行 */
 			x = 0;
-			str += 2 ;
+			s += 2 ;
 		}
 #ifdef ll_SSD1306_font_CN1616
-		if((*str) > 127) /* 如果是中文 */
+		if((*s) > 127) /* 如果是中文 */
 		{
 			if(x > iSSD1306_conf[idN].screenConf.width - 16) /* 自动换行 */
 			{
@@ -309,7 +345,7 @@ void LLOS_SSD1306_ShowString(uint16_t x, uint16_t y, const char *str)
 			}
 			for(index = 0; index < chinese_num; index++) /* 循环查找 */
 			{
-				if(ll_SSD1306_font_CN16x16[index].CN_index[0] == *str && ll_SSD1306_font_CN16x16[index].CN_index[1] == *(str + 1) && ll_SSD1306_font_CN16x16[index].CN_index[2] == *(str + 2))
+				if(ll_SSD1306_font_CN16x16[index].CN_index[0] == *s && ll_SSD1306_font_CN16x16[index].CN_index[1] == *(s + 1) && ll_SSD1306_font_CN16x16[index].CN_index[2] == *(s + 2))
 				{			
 					LLOS_SSD1306_SetPos(x, y);
 					/* 从字库中查找字模填充第一页 */		
@@ -330,7 +366,7 @@ void LLOS_SSD1306_ShowString(uint16_t x, uint16_t y, const char *str)
 					}	
 				}
 			}
-			str += 3;	
+			s += 3;	
 			index = 0;
 		}
 #endif
@@ -341,232 +377,18 @@ void LLOS_SSD1306_ShowString(uint16_t x, uint16_t y, const char *str)
 				x = 0;
 				y += 2; /* 换行 */
 			}
-			LLOS_SSD1306_ShowChar(x, y, *str, ll_SSD1306_sizeFont_8x16);
+			LLOS_SSD1306_ShowChar(x, y, *s, ll_SSD1306_sizeFont_8x16);
 			x += 8;
-			str++;
+			s++;
 		}
 	}
 }
 uint8_t g_aLcdBuf[128][64 >> 3];
-void LLOS_SSD1306_DrawDot(uint16_t x, uint16_t y)
+void LLOS_SSD1306_DrawDot(uint16_t x, uint16_t y, uint16_t dummy)
 {
     uint8_t PageNumber = y >> 3;
     LLOS_SSD1306_SetPos(x, PageNumber);
     g_aLcdBuf[x][PageNumber] |= 1 << (y & 7);
 
     I8080_WriteByteCB(g_aLcdBuf[x][PageNumber], ll_SSD1306_cmd_Data);
-}
-void LLOS_SSD1306_DrawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
-{
-    uint16_t Xpoint, Ypoint;
-    int16_t dx, dy;
-    int16_t XAddway,YAddway;
-    int16_t Esp;
-    int8_t dottedLen;
-    Xpoint = x1;
-    Ypoint = y1;
-	
-    dx = (int16_t)x2 - (int16_t)x1 >= 0 ? x2 - x1 : x1 - x2;
-    dy = (int16_t)y2 - (int16_t)y1 <= 0 ? y2 - y1 : y1 - y2;
-
-    XAddway = x1 < x2 ? 1 : -1;
-    YAddway = y1 < y2 ? 1 : -1;
-
-    Esp = dx + dy;
-    dottedLen = 0;
-
-    for(;;)
-    {
-        dottedLen++;
-        LLOS_SSD1306_DrawDot(Xpoint, Ypoint);
-        if((Esp << 1) >= dy)
-        {
-            if(Xpoint == x2)break;
-            Esp += dy;
-            Xpoint += XAddway;
-        }
-        if((Esp << 1) <= dx)
-        {
-            if(Ypoint == y2)break;
-            Esp += dx;
-            Ypoint += YAddway;
-        }
-    }
-}
-
-void LLOS_SSD1306_DrawRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ll_newState_t isFill)
-{
-    uint16_t i;
-	
-    if(isFill)
-    {
-		for(i = y; i < y + h; i++)LLOS_SSD1306_DrawLine(x, i, x + w, i);
-    }
-    else
-    {
-        LLOS_SSD1306_DrawLine(x, y, x + w, y);
-        LLOS_SSD1306_DrawLine(x, y, x, y + h);
-        LLOS_SSD1306_DrawLine(x + w, y + h, x + w, y);
-        LLOS_SSD1306_DrawLine(x + w, y + h, x, y + h);
-    }
-}
-void LLOS_SSD1306_DrawRoundedRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t r, ll_newState_t isFill)
-{
-	uint16_t i;
-
-    if(isFill)
-    {
-    	i = y;
-    	for( ; i < y + r; i++)
-    	{
-    		LLOS_SSD1306_DrawLine(x + (r - (i - y)), i, x + w - 1 - (r - (i - y)), i);
-		}
-    	for( ; i < y + h - r; i++)
-    	{
-    		LLOS_SSD1306_DrawLine(x, i, x + w - 1, i);
-		}
-    	for( ; i < y + h; i++)
-    	{
-    		LLOS_SSD1306_DrawLine(x + r - (y + h - i), i, x + w - 1 - r + (y + h - i), i);
-		}
-    }
-    else
-    {
-        LLOS_SSD1306_DrawLine(x + r, y, x + w - 1 - r, y);
-        LLOS_SSD1306_DrawLine(x + w - 1, y + r, x + w - 1, y + h - 1 - r);
-        LLOS_SSD1306_DrawLine(x + w - 1 - r, y + h - 1, x + r, y + h - 1);
-        LLOS_SSD1306_DrawLine(x, y + h - 1 - r, x, y + r);
-
-        LLOS_SSD1306_DrawLine(x + r, y, x, y + r);
-        LLOS_SSD1306_DrawLine(x + w - 1 - r, y, x + w - 1, y + r);
-        LLOS_SSD1306_DrawLine(x + w - 1, y + h - 1 - r, x + w - 1 - r, y + h - 1);
-        LLOS_SSD1306_DrawLine(x, y + h - 1 - r, x + r, y + h - 1);
-	}
-}
-void LLOS_SSD1306_DrawCircle(uint16_t x, uint16_t y, uint16_t r, ll_newState_t isFill)
-{
-	int16_t sCurrentX, sCurrentY;
-	int16_t sError;
-
-     sCurrentX = 0;
-     sCurrentY = r;
-     sError = 3 - (r << 1);
-
-     while(sCurrentX <= sCurrentY)
-     {
-         int16_t sCountY = 0;
-         if(isFill)
-         {
-             for(sCountY = sCurrentX; sCountY <= sCurrentY; sCountY++)
-             {
-                 LLOS_SSD1306_DrawDot(x + sCurrentX, y + sCountY);
-                 LLOS_SSD1306_DrawDot(x - sCurrentX, y + sCountY);
-                 LLOS_SSD1306_DrawDot(x - sCountY,   y + sCurrentX);
-                 LLOS_SSD1306_DrawDot(x - sCountY,   y - sCurrentX);
-                 LLOS_SSD1306_DrawDot(x - sCurrentX, y - sCountY);
-                 LLOS_SSD1306_DrawDot(x + sCurrentX, y - sCountY);
-                 LLOS_SSD1306_DrawDot(x + sCountY,   y - sCurrentX);
-                 LLOS_SSD1306_DrawDot(x + sCountY,   y + sCurrentX);
-             }
-		}
-		else
-		{
-			LLOS_SSD1306_DrawDot(x + sCurrentX, y + sCurrentY);
-			LLOS_SSD1306_DrawDot(x - sCurrentX, y + sCurrentY);
-			LLOS_SSD1306_DrawDot(x - sCurrentY, y + sCurrentX);
-			LLOS_SSD1306_DrawDot(x - sCurrentY, y - sCurrentX);
-			LLOS_SSD1306_DrawDot(x - sCurrentX, y - sCurrentY);
-			LLOS_SSD1306_DrawDot(x + sCurrentX, y - sCurrentY);
-			LLOS_SSD1306_DrawDot(x + sCurrentY, y - sCurrentX);
-			LLOS_SSD1306_DrawDot(x + sCurrentY, y + sCurrentX);
-		}
-		sCurrentX++;
-		if(sError < 0)sError += (4 * sCurrentX + 6);
-		else
-		{
-			sError += (10 + 4 * (sCurrentX - sCurrentY));
-			sCurrentY--;
-		}
-     }
-}
-/* 扫描线活动表 */
-struct edge_t
-{
-	uint16_t startY;
-    float startX, endX;
-    float slopeInv; /* 斜率的倒数 */
-};
-/* 交换两个整数值 */
-static void SwapInt(uint16_t *a, uint16_t *b)
-{
-	uint16_t temp = *a;
-    *a = *b;
-    *b = temp;
-}
-/* 初始化边的信息 */
-static void InitEdge(struct edge_t *e, uint16_t yStart, float xStart, float xEnd, float slopeInverse)
-{
-    e->startY = yStart;
-    e->startX = xStart;
-    e->endX = xEnd;
-    e->slopeInv = slopeInverse;
-}
-
-void LLOS_SSD1306_DrawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, ll_newState_t isFill)
-{
-	if(isFill)
-	{
-		/* 扫描线算法 */
-	    /* 对三个点按y坐标进行排序 */
-	    if(y1 > y2)
-	    {
-	    	SwapInt(&y1, &y2);
-	    	SwapInt(&x1, &x2);
-	    }
-	    if(y1 > y3)
-	    {
-	    	SwapInt(&y1, &y3);
-	    	SwapInt(&x1, &x3);
-	    }
-	    if(y2 > y3)
-	    {
-	    	SwapInt(&y2, &y3);
-	    	SwapInt(&x2, &x3);
-	    }
-
-	    /* 初始化三条边的信息 */
-	    struct edge_t edges[3];
-	    InitEdge(&edges[0], y1, x1, x2, (float)(x2 - x1) / (y2 - y1));
-	    InitEdge(&edges[1], y2, x2, x3, (float)(x3 - x2) / (y3 - y2));
-	    InitEdge(&edges[2], y1, x1, x3, (float)(x3 - x1) / (y3 - y1));
-
-	    /* 逐行扫描，填充三角形 */
-	    for(uint16_t y = y1; y <= y3; y++)
-	    {
-	        /* 找到当前行对应的边 */
-	    	int16_t leftX = -1, rightX = -1;
-	        for(uint16_t i = 0; i < 3; i++)
-	        {
-	            if(y >= edges[i].startY)
-	            {
-	                if(leftX == -1 || edges[i].startX < edges[leftX].startX)leftX = i;
-	                if(rightX == -1 || edges[i].startX > edges[rightX].startX)rightX = i;
-	            }
-	        }
-
-	        /* 画水平线填充三角形 */
-	        if (leftX != -1 && rightX != -1)
-	        	LLOS_SSD1306_DrawLine((uint16_t)edges[leftX].startX, y, (uint16_t)edges[rightX].startX, y);
-
-	        /* 更新边的起始x坐标 */
-	        edges[leftX].startX += edges[leftX].slopeInv;
-	        edges[rightX].startX += edges[rightX].slopeInv;
-	    }
-	}
-	else
-	{
-		LLOS_SSD1306_DrawLine(x1, y1, x2, y2);
-		LLOS_SSD1306_DrawLine(x1, y1, x3, y3);
-		LLOS_SSD1306_DrawLine(x2, y2, x3, y3);
-	}
 }

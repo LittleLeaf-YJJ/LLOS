@@ -5,8 +5,8 @@
  * 响调度精度，所以建议尽可能地使用状态机对阻塞任务进行拆分。RTC闹钟和软件定时器的回调
  * 函数里不能有阻塞。
  * 作者: LittleLeaf All rights reserved
- * 版本: V2.0.0
- * 修订日期: 2025/02/25
+ * 版本: V2.0.2
+ * 修订日期: 2025/03/08
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -31,9 +31,11 @@
  extern "C" {
 #endif
 
-#define LLOS_VERSION		"V2.0.0"
+#define LLOS_VERSION		"V2.0.2"
 
+#define LL_EVENT_ALL		(0xFFFF)
 #define LL_EVENT_MSG		(0x8000)
+#define LL_EVENT(n)			(0x0001 << n)
 
 #define LL_ERR_SUCCESS		(0x00)
 #define LL_ERR_FAILED		(0x01)
@@ -54,6 +56,9 @@
           | (((uint32_t)(b1) & 0x00FF) << 8) \
           | (((uint32_t)(b2) & 0x00FF) << 16) \
           | (((uint32_t)(b3) & 0x00FF) << 24)))
+#define LL_SET_BIT(REG, BIT)     ((REG) |= (BIT))
+#define LL_CLEAR_BIT(REG, BIT)   ((REG) &= ~(BIT))
+#define LL_READ_BIT(REG, BIT)    ((REG) & (BIT))
 
 #ifndef NULL
 #define NULL				((void *)0)
@@ -611,6 +616,18 @@ ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val);
  * 返回值: 错误码
  ====================================================================================*/
 ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len);
+
+/*====================================================================================
+ * 函数名: LLOS_Cmd_ResultXXX
+ * 描述: 返回对应类型的值
+ * 参数:
+ * 		val: 对应的值
+ ====================================================================================*/
+void LLOS_Cmd_ResultBool(bool val);
+void LLOS_Cmd_ResultFloat(float val);
+void LLOS_Cmd_ResultInt32(int32_t val);
+void LLOS_Cmd_ResultUInt32(uint32_t val);
+void LLOS_Cmd_ResultText(char *val);
 
 #ifdef __cplusplus
  }

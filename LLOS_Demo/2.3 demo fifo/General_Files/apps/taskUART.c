@@ -1,7 +1,7 @@
 #include "taskUART.h"
 #include "system.h"
 
-#define EVENT_UART_LOOP		0x0001
+#define EVENT_UART_LOOP		LL_EVENT(0)
 
 static uint8_t bufferUART[1024];
 llos_fifo_t fifoUART;

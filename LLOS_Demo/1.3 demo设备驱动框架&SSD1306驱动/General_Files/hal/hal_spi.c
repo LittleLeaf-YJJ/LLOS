@@ -51,8 +51,15 @@ static ll_err_t HW_SPI1_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg)
 	ll_bit_t bit;
 	bit = *(uint8_t *)arg;
 	
-	if(bit)LLOS_Device_WritePin(dev, cmd, ll_set);
-	else LLOS_Device_WritePin(dev, cmd, ll_reset);
+	if(bit)
+	{
+		//while(__HAL_SPI_GET_FLAG(&hspi1, SPI_FLAG_BSY) == SET);
+		LLOS_Device_WritePin(dev, cmd, ll_set);
+	}
+	else 
+	{
+		LLOS_Device_WritePin(dev, cmd, ll_reset);
+	}
 
 	return LL_ERR_SUCCESS;
 }

@@ -1,7 +1,8 @@
 #include "task_display.h"
 #include <llos_ssd1306.h>
+#include <llos_graphic.h>
 
-#define TASK_DISPLAY_EVENT1		0x0001
+#define TASK_DISPLAY_EVENT1		LL_EVENT(0)
 
 static uint8_t pic0[];
 static uint8_t pic1[];
@@ -76,26 +77,26 @@ void TaskDisplay_Init(void)
     taskDisplayId = LLOS_Register_Events(Task0_Events);
     if(taskDisplayId == LL_ERR_INVALID)
     {
-    	LOG_E("TaskDisplay ", "init failed!\r\n");
+    	LOG_E("%s ", "init failed!\r\n", __FUNCTION__);
 		while(1);
     }
 
 	devGPIOA = LLOS_Device_Find("GPIOA");
 	if(devGPIOA == NULL)
 	{
-    	LOG_E("TaskDisplay ", "GPIOA Not Found!\r\n");
+    	LOG_E("%s ", "GPIOA Not Found!\r\n", __FUNCTION__);
 		while(1);
 	}
 	devSPI1 = LLOS_Device_Find("SPI1");
 	if(devSPI1 == NULL)
 	{
-    	LOG_E("TaskDisplay ", "SPI1 Not Found!\r\n");
+    	LOG_E("%s ", "SPI1 Not Found!\r\n", __FUNCTION__);
 		while(1);
 	}
 	devI2C2 = LLOS_Device_Find("I2C2");
 	if(devI2C2 == NULL)
 	{
-    	LOG_E("TaskDisplay ", "I2C2 Not Found!\r\n");
+    	LOG_E("%s ", "I2C2 Not Found!\r\n", __FUNCTION__);
 		while(1);
 	}
 	
@@ -128,6 +129,7 @@ void TaskDisplay_Init(void)
 	SSD1306_conf[1].screenConf.brightness = 255;
 	
 	LLOS_SSD1306_HAL_Init(SSD1306_conf, 2);
+	LLOS_Graphic_Register_DrawDot(LLOS_SSD1306_DrawDot);
 	
 	for(uint8_t i = 0; i < 2; i++)
 	{
@@ -141,20 +143,21 @@ void TaskDisplay_Init(void)
 		
 		LLOS_DelayMs(1000);
 		LLOS_SSD1306_Fill(0x00);
-		LLOS_SSD1306_ShowNumFormat(0, 0, 32767, "%08X", ll_SSD1306_sizeFont_8x16);
-		LLOS_SSD1306_ShowNumFormat(0, 2, 32767, "%08X", ll_SSD1306_sizeFont_6x8);
-		LLOS_SSD1306_ShowNumFormat(0, 4, -32767, "%d", ll_SSD1306_sizeFont_8x16);
+		LLOS_SSD1306_ShowNumFormat(0, 0, 32767, "AAA:%08X", ll_SSD1306_sizeFont_8x16);
+		LLOS_SSD1306_ShowNumFormat(0, 2, 32767, "%08X BBB", ll_SSD1306_sizeFont_6x8);
+		LLOS_SSD1306_ShowNumFormat(0, 4, -32767, "A %d B", ll_SSD1306_sizeFont_8x16);
+		LLOS_SSD1306_ShowNumFormat(0, 6, -3.14159, "Float:%.3f", ll_SSD1306_sizeFont_8x16);
 		
 		LLOS_DelayMs(1000);
 		LLOS_SSD1306_Fill(0x00);
-		LLOS_SSD1306_DrawRectangle(0, 0, 16, 16, ll_disable);
-		LLOS_SSD1306_DrawRectangle(30, 0, 16, 16, ll_enable);
-		LLOS_SSD1306_DrawRoundedRectangle(60, 0, 30, 16, 5, ll_disable);
-		LLOS_SSD1306_DrawRoundedRectangle(96, 0, 30, 16, 5, ll_enable);
-		LLOS_SSD1306_DrawCircle(8, 30, 8, ll_disable);
-		LLOS_SSD1306_DrawCircle(38, 30, 8, ll_enable);
-		LLOS_SSD1306_DrawTriangle(5, 60, 15, 60, 10, 50, ll_disable);
-		LLOS_SSD1306_DrawTriangle(35, 60, 45, 60, 40, 50, ll_enable);
+		LLOS_Graphic_DrawRectangle(0, 0, 16, 16, ll_disable, 0);
+		LLOS_Graphic_DrawRectangle(30, 0, 16, 16, ll_enable, 0);
+		LLOS_Graphic_DrawRoundedRectangle(60, 0, 30, 16, 5, ll_disable, 0);
+		LLOS_Graphic_DrawRoundedRectangle(96, 0, 30, 16, 5, ll_enable, 0);
+		LLOS_Graphic_DrawCircle(8, 30, 8, ll_disable, 0);
+		LLOS_Graphic_DrawCircle(38, 30, 8, ll_enable, 0);
+		LLOS_Graphic_DrawTriangle(5, 60, 15, 60, 10, 50, ll_disable, 0);
+		LLOS_Graphic_DrawTriangle(35, 60, 45, 60, 40, 50, ll_enable, 0);
 		
 		LLOS_DelayMs(1000);
 		LLOS_SSD1306_Fill(0x00);
