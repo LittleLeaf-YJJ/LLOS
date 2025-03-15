@@ -3,135 +3,119 @@
  */
 #include <llos_led.h>
 
-struct ledList_t
-{
-	ll_IO_t port;
-	uint32_t ledN;
-	uint32_t tick;
-	uint16_t ms;
-	uint8_t num;
-	uint8_t duty;
-};
-
-static uint8_t i;
 static uint16_t ledTaskPeriod;
-static uint8_t ledIndex, ll_ledNum;
-static struct ledList_t *ledList;
+static uint8_t ll_ledNum;
+
+static struct ll_led_config_t *ll_led_config;
 
 static void LLOS_LED_Tick(uint8_t timerN);
 
-void LLOS_LED_Init(uint16_t ms, uint8_t timerN, uint8_t ledNum)
+void LLOS_LED_Init(uint8_t timerN, uint16_t ms, struct ll_led_config_t *led_config, uint8_t ledNum)
 {
 	uint32_t size;
+	
+	if(ms <= 0 || ledNum <= 0 || led_config == NULL)
+	{
+		LOG_E("LLOS_LED_Init ", "para NULL!\r\n");
+		while(1);
+	}
+	
 	ledTaskPeriod = ms;
 	ll_ledNum = ledNum;
 	
-	size = sizeof(struct ledList_t) * ll_ledNum;
-	ledList = LLOS_malloc(size);
-	if(ledList == NULL && ll_ledNum != 0)
+	size = sizeof(struct ll_led_config_t) * ledNum;
+	ll_led_config = LLOS_malloc(size);
+	if(ll_led_config == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "ledList malloc null!\r\n");
+		LOG_E("LLOS_LED_Init ", "led_config malloc null!\r\n");
 		while(1);
 	}
-	memset(ledList, 0, size);
+	memcpy(ll_led_config, led_config, size);
 	
 	LLOS_Timer_Set(timerN, ll_enable, true, LLOS_Ms_To_Tick(ledTaskPeriod), LLOS_LED_Tick);
 }
 
-void LLOS_LED_Set(ll_IO_t port, uint32_t ledN, ll_led_t mode)
+void LLOS_LED_Set(uint8_t index, enum ll_led_t mode)
 {
-	if(port == 0)return;
-	ll_IO_t *temp = (ll_IO_t *)port;
-
-	/* 关闭正在在闪烁的LED */
-	for(i = 0; i < ll_ledNum; i++)
+	if(ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
 	{
-		if(ledList[i].port == port && ledList[i].ledN == ledN)
-		{
-			ledList[i].port = 0;
-			ledList[i].ledN = 0;
-			ledList[i].num = 0;
-		}
+		LOG_E("LLOS_LED_Set ", "port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
+		while(1);
 	}
+	
+	ll_IO_t *temp = (ll_IO_t *)ll_led_config[index].port;
+
+	ll_led_config[index].ledBlink.num = 0; /* 关闭正在闪烁的LED */
 
 	switch(mode)
 	{
 		case ll_led_off:
 		{
-			*temp |= ledN;
+			if(ll_led_config[index].isActiveHigh)*temp |= ll_led_config[index].pinMask;
+			else *temp &= ~ll_led_config[index].pinMask;
 			break;
 		}
 		case ll_led_on:
 		{
-			*temp &= ~ledN;
+			if(ll_led_config[index].isActiveHigh)*temp &= ~ll_led_config[index].pinMask;
+			else *temp |= ll_led_config[index].pinMask;
 			break;
 		}
 		case ll_led_toggle:
 		{
-			*temp ^= ledN;
+			*temp ^= ll_led_config[index].pinMask;
 			break;
 		}
 		default:
 		{
-			*temp |= ledN;
+			if(ll_led_config[index].isActiveHigh)*temp |= ll_led_config[index].pinMask;
+			else *temp &= ~ll_led_config[index].pinMask;
 			break;
 		}
 	}
 }
 
-void LLOS_LED_Blink(ll_IO_t port, uint32_t ledN, uint8_t num, uint8_t duty, uint16_t ms)
+void LLOS_LED_Blink(uint8_t index, uint8_t num, uint8_t duty, uint16_t ms)
 {
-	/* 如果被操作的LED已经在列表中 */
-	for(i = 0; i < ll_ledNum; i++)
+	if(ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
 	{
-		if(ledList[i].port == port && ledList[i].ledN == ledN)
-		{
-			ledList[i].port = port;
-			ledList[i].ledN = ledN;
-			ledList[i].num = num; /* 一亮一灭为一次闪烁 */
-			ledList[i].duty = duty;
-			ledList[i].ms = ms;
-			ledList[i].tick = 0;
-			return;
-		}
+		LOG_E("LLOS_LED_Set ", "port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
+		while(1);
 	}
 	
-	/* 如果被操作的LED没有在列表中则创建一个 */
-	if(ledIndex >= ll_ledNum)
-	{
-		LOG_E("LLOS_LED_Blink: ", "> LL_LED_NUM!\r\n");
-		return;
-	}
-	
-	ledList[ledIndex].port = port;
-	ledList[ledIndex].ledN = ledN;
-	ledList[ledIndex].num = num;
-	ledList[ledIndex].duty = duty;
-	ledList[ledIndex].ms = ms;
-	ledList[ledIndex].tick = 0;
-	
-	ledIndex++;
+	ll_led_config[index].ledBlink.num = num;
+	ll_led_config[index].ledBlink.duty = duty;
+	ll_led_config[index].ledBlink.ms = ms;
+	ll_led_config[index].ledBlink.tick = 0;
 }
 
 static void LLOS_LED_Tick(uint8_t timerN)
 {
+	uint8_t i;
 	ll_IO_t *temp;
+	
 	for(i = 0; i < ll_ledNum; i++)
 	{
-		if(ledList[i].port == 0 || ledList[i].ledN == 0 || ledList[i].num == 0)continue;
+		if(ll_led_config[i].ledBlink.num == 0)continue;
 		
-		temp = (ll_IO_t *)ledList[i].port;
-		ledList[i].tick++;
+		temp = (ll_IO_t *)ll_led_config[i].port;
+		ll_led_config[i].ledBlink.tick++;
 
-		if(ledList[i].tick * ledTaskPeriod * 100 >= ledList[i].ms * ledList[i].duty)
-			*temp |= ledList[i].ledN;
-		else
-			*temp &= ~ledList[i].ledN;
-
-		if((ledList[i].tick * ledTaskPeriod) >= ledList[i].ms)
+		if(ll_led_config[i].ledBlink.tick * ledTaskPeriod * 100 >= ll_led_config[i].ledBlink.ms * ll_led_config[i].ledBlink.duty)
 		{
-			ledList[i].tick = 0;
-			if(ledList[i].num < 255)ledList[i].num--;
+			if(ll_led_config[i].isActiveHigh)*temp |= ll_led_config[i].pinMask;
+			else *temp &= ~ll_led_config[i].pinMask;
+		}
+		else
+		{
+			if(ll_led_config[i].isActiveHigh)*temp &= ~ll_led_config[i].pinMask;
+			else *temp |= ll_led_config[i].pinMask;
+		}
+
+		if((ll_led_config[i].ledBlink.tick * ledTaskPeriod) >= ll_led_config[i].ledBlink.ms)
+		{
+			ll_led_config[i].ledBlink.tick = 0;
+			if(ll_led_config[i].ledBlink.num < 255)ll_led_config[i].ledBlink.num--;
 		}
 	}
 }

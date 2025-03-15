@@ -1,7 +1,6 @@
 #include "system.h"
 #include "main.h"
 #include "usart.h"
-#include <llos_led.h>
 
 #include "task0.h"
 #include "task1.h"
@@ -48,10 +47,6 @@ void System_Init(void)
 	init_memCfgs.poolSize = sizeof(pMemPool);
 	LLOS_Init(NVIC_SystemReset, &init_delayCBs, &init_memCfgs);
 	LLOS_Cmd_Init(255, "LittleLeaf", "LLOS", LLOS_VERSION, "00000001");
-	
-	/* LLOS LED模块初始化 */
-	LLOS_LED_Init(10, 0, 1);
-	LLOS_LED_Blink(PORT_LED, PIN_LED0, 255, 10, 500);
 	
 	/* Task初始化 */
 	Task0_Init();

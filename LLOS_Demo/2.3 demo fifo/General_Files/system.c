@@ -15,7 +15,7 @@
 /* KEY */
 #define GPIO_IDR_OFFSET			(8)
 #define PORT_KEY_A				GPIOA_BASE + GPIO_IDR_OFFSET
-#define PIN_KEY0				LL_LEDn(7)
+#define PIN_KEY0				LL_KEYn(7)
 
 /* ========================[变量声明]========================= */
 /* 串口缓冲区 */
@@ -52,11 +52,18 @@ void System_Init(void)
 	init_memCfgs.poolSize = sizeof(pMemPool);
 	LLOS_Init(NVIC_SystemReset, &init_delayCBs, &init_memCfgs);
 
+	/* LLOS LED模块初始化 */
+	struct ll_led_config_t led_config = {0};
+	led_config.port = PORT_LED;
+	led_config.pinMask = PIN_LED0;
+	led_config.isActiveHigh = 1;
+	LLOS_LED_Init(0, 10, &led_config, 1);
+	
 	/* LLOS KEY模块初始化 */
 	struct ll_keyConfig_t keyConfig = {0};
 	keyConfig.port = PORT_KEY_A;
 	keyConfig.pinMask = PIN_KEY0;
-	LLOS_Key_Init(10, 1, 2, &keyConfig, keyCB, 150, 800);
+	LLOS_Key_Init(1, 10, 100, 800, &keyConfig, 1, keyCB);
 	
 	/* Task初始化 */
 	Task_UART_Init();
@@ -70,9 +77,10 @@ void System_Loop(void)
 		usart1_recBuf.rxOK = false;
 		LLOS_FIFO_Input(&fifoUART, usart1_recBuf.data, usart1_recBuf.len);
 	}
-	uint32_t i = LLOS_FIFO_Get_AvailableSize(&fifoUART);
-	if(i < 300)LLOS_LED_Set(PORT_LED, PIN_LED0, ll_led_on);
-	else LLOS_LED_Set(PORT_LED, PIN_LED0, ll_led_off);
+	uint32_t i;
+	i = LLOS_FIFO_Get_AvailableSize(&fifoUART);
+	if(i < 999)LLOS_LED_Set(0, ll_led_on);
+	else LLOS_LED_Set(0, ll_led_off);
 }
 
 int fputc(int ch, FILE *f)

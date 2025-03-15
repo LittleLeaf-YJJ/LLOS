@@ -29,7 +29,7 @@ static struct FSM_value_t *FSM_value;
 
 static void LLOS_Key_Tick(uint8_t timerN);
 
-void LLOS_Key_Init(uint16_t ms, uint8_t timerN, uint8_t keyNum, struct ll_keyConfig_t *keyConfig, ll_keyCB_t keyCB, uint16_t overTime, uint16_t longPressTime)
+void LLOS_Key_Init(uint8_t timerN, uint16_t ms, uint16_t overTime, uint16_t longPressTime, struct ll_keyConfig_t *keyConfig, uint8_t keyNum, ll_keyCB_t keyCB)
 {
 	uint32_t size;
 	
@@ -117,7 +117,6 @@ static void LLOS_Key_Tick(uint8_t timerN)
 				}
 				else
 				{
-					//ll_keyWhich[i].pin = ~FSM_value[i].pinState & ll_keyConfig[i].pinMask; /* 保存键值 */
 					ll_keyWhich[i].pin = ~*((ll_IO_t *)ll_keyConfig[i].port) & ll_keyConfig[i].pinMask; /* 保存键值 */
 					ll_keyWhich[i].pressTime = FSM_value[i].pressTime; /* 保存长按时间 */
 					if(keyChangeCB != NULL)keyChangeCB(i, false);	/* 按键未弹起时的回调 */

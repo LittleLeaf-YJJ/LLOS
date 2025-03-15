@@ -17,8 +17,8 @@
 #define GPIO_IDR_OFFSET			(8)
 #define PORT_KEY_A				GPIOA_BASE + GPIO_IDR_OFFSET
 #define PORT_KEY_B				GPIOB_BASE + GPIO_IDR_OFFSET
-#define PIN_KEY0				LL_LEDn(7)
-#define PIN_KEY1				LL_LEDn(0)
+#define PIN_KEY0				LL_KEYn(7)
+#define PIN_KEY1				LL_KEYn(0)
 
 /* ========================[变量声明]========================= */
 /* 串口缓冲区 */
@@ -30,7 +30,7 @@ struct usartBuf_t
 	volatile bool rxOK;
 }usart1_recBuf;
 
-static uint32_t pMemPool[640];
+static uint32_t pMemPool[1024];
 
 /* ========================[函数声明]========================= */
 static void keyCB(uint8_t portN, bool isUp);
@@ -56,11 +56,30 @@ void System_Init(void)
 	LLOS_Init(NVIC_SystemReset, &init_delayCBs, &init_memCfgs);
 	
 	/* LLOS LED模块初始化 */
-	LLOS_LED_Init(10, 0, 3);
-	LLOS_LED_Blink(PORT_LED, PIN_LED0, 10, 10, 500);
-	LLOS_LED_Blink(PORT_LED, PIN_LED1, 255, 15, 100);
-	LLOS_LED_Blink(PORT_LED, PIN_LED2, 255, 90, 100);
-	LLOS_LED_Set(PORT_LED, PIN_LED3, ll_led_on);
+	struct ll_led_config_t led_config[4] = {0};
+	
+	led_config[0].port = PORT_LED;
+	led_config[0].pinMask = PIN_LED0;
+	led_config[0].isActiveHigh = 1;
+	
+	led_config[1].port = PORT_LED;
+	led_config[1].pinMask = PIN_LED1;
+	led_config[1].isActiveHigh = 1;
+	
+	led_config[2].port = PORT_LED;
+	led_config[2].pinMask = PIN_LED2;
+	led_config[2].isActiveHigh = 1;
+	
+	led_config[3].port = PORT_LED;
+	led_config[3].pinMask = PIN_LED3;
+	led_config[3].isActiveHigh = 1;
+	
+	LLOS_LED_Init(0, 10, led_config, 4);
+	
+	LLOS_LED_Blink(0, 10, 10, 500);
+	LLOS_LED_Blink(1, 255, 15, 100);
+	LLOS_LED_Blink(2, 255, 90, 100);
+	LLOS_LED_Set(3, ll_led_on);
 	
 	/* LLOS KEY模块初始化 */
 	struct ll_keyConfig_t keyConfig[2] = {0};
@@ -68,7 +87,7 @@ void System_Init(void)
 	keyConfig[0].pinMask = PIN_KEY0;
 	keyConfig[1].port = PORT_KEY_B;
 	keyConfig[1].pinMask = PIN_KEY1;
-	LLOS_Key_Init(10, 1, 2, keyConfig, keyCB, 150, 800);
+	LLOS_Key_Init(1, 10, 100, 800, keyConfig, 2, keyCB);
 	
 	LOG_I("Used memory pool size: %d\r\n", LLOS_MemoryPool_GetSize());
 }
@@ -90,7 +109,7 @@ static void keyCB(uint8_t portN, bool isUp)
 	
 	if(isUp && ll_keyWhich[portN].event == ll_key_event_Click && ll_keyWhich[portN].pin & PIN_KEY0 && portN == 0)
 	{
-		LLOS_LED_Set(PORT_LED, PIN_LED3, ll_led_toggle);
+		LLOS_LED_Set(3, ll_led_toggle);
 	}
 	if(isUp && ll_keyWhich[portN].event == ll_key_event_LongPress && ll_keyWhich[portN].pin & PIN_KEY0 && portN == 0)
 	{
