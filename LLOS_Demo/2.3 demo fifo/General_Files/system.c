@@ -56,7 +56,7 @@ void System_Init(void)
 	struct ll_led_config_t led_config = {0};
 	led_config.port = PORT_LED;
 	led_config.pinMask = PIN_LED0;
-	led_config.isActiveHigh = 1;
+	led_config.isActiveHigh = true;
 	LLOS_LED_Init(0, 10, &led_config, 1);
 	
 	/* LLOS KEY模块初始化 */

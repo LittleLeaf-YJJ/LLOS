@@ -37,9 +37,9 @@ void LLOS_LED_Init(uint8_t timerN, uint16_t ms, struct ll_led_config_t *led_conf
 
 void LLOS_LED_Set(uint8_t index, enum ll_led_t mode)
 {
-	if(ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
+	if(index >= ll_ledNum || ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
 	{
-		LOG_E("LLOS_LED_Set ", "port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
+		LOG_E("LLOS_LED_Set ", "index >= ll_ledNum || port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
 		while(1);
 	}
 	
@@ -77,9 +77,9 @@ void LLOS_LED_Set(uint8_t index, enum ll_led_t mode)
 
 void LLOS_LED_Blink(uint8_t index, uint8_t num, uint8_t duty, uint16_t ms)
 {
-	if(ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
+	if(index >= ll_ledNum || ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
 	{
-		LOG_E("LLOS_LED_Set ", "port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
+		LOG_E("LLOS_LED_Blink ", "index >= ll_ledNum || port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
 		while(1);
 	}
 	

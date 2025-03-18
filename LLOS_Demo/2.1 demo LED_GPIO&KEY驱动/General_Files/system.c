@@ -60,19 +60,19 @@ void System_Init(void)
 	
 	led_config[0].port = PORT_LED;
 	led_config[0].pinMask = PIN_LED0;
-	led_config[0].isActiveHigh = 1;
+	led_config[0].isActiveHigh = true;
 	
 	led_config[1].port = PORT_LED;
 	led_config[1].pinMask = PIN_LED1;
-	led_config[1].isActiveHigh = 1;
+	led_config[1].isActiveHigh = true;
 	
 	led_config[2].port = PORT_LED;
 	led_config[2].pinMask = PIN_LED2;
-	led_config[2].isActiveHigh = 1;
+	led_config[2].isActiveHigh = true;
 	
 	led_config[3].port = PORT_LED;
 	led_config[3].pinMask = PIN_LED3;
-	led_config[3].isActiveHigh = 1;
+	led_config[3].isActiveHigh = true;
 	
 	LLOS_LED_Init(0, 10, led_config, 4);
 	
