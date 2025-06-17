@@ -12,7 +12,7 @@ ll_taskEvent_t Task_UART_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 {
 	if(events & LL_EVENT_MSG)
 	{
-		LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
+		LL_LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
 		LLOS_Msg_Clear(taskId);
 		return LL_EVENT_MSG;
 	}
@@ -35,7 +35,7 @@ void Task_UART_Init(void)
     taskUART = LLOS_Register_Events(Task_UART_Events);
     if(taskUART == LL_ERR_INVALID)
     {
-    	LOG_E("TaskUART ", "init failed!\r\n");
+    	LL_LOG_E("TaskUART ", "init failed!\r\n");
 		while(1);
     }
 	

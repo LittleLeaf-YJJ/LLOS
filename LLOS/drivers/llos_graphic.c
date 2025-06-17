@@ -5,14 +5,14 @@ static ll_graphic_drawDotCB_t ll_graphic_drawDotCB;
 void LLOS_Graphic_Register_DrawDot(ll_graphic_drawDotCB_t graphic_drawDotCB)
 {
 	if(graphic_drawDotCB != NULL)ll_graphic_drawDotCB = graphic_drawDotCB;
-	else LOG_E("LLOS_Graphic_Register_DrawDot ", "para NULL!\r\n");
+	else LL_LOG_E("LLOS_Graphic_Register_DrawDot ", "para NULL!\r\n");
 }
 
 void LLOS_Graphic_DrawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
 	if(ll_graphic_drawDotCB == NULL)
 	{
-		LOG_E("LLOS_Graphic_DrawLine ", "Callback NULL!\r\n");
+		LL_LOG_E("LLOS_Graphic_DrawLine ", "Callback NULL!\r\n");
 		return;
 	}
 	
@@ -56,7 +56,7 @@ void LLOS_Graphic_DrawRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
 {
 	if(ll_graphic_drawDotCB == NULL)
 	{
-		LOG_E("LLOS_Graphic_DrawRectangle ", "Callback NULL!\r\n");
+		LL_LOG_E("LLOS_Graphic_DrawRectangle ", "Callback NULL!\r\n");
 		return;
 	}
 	
@@ -78,7 +78,7 @@ void LLOS_Graphic_DrawRoundedRectangle(uint16_t x, uint16_t y, uint16_t w, uint1
 {
 	if(ll_graphic_drawDotCB == NULL)
 	{
-		LOG_E("LLOS_Graphic_DrawRoundedRectangle ", "Callback NULL!\r\n");
+		LL_LOG_E("LLOS_Graphic_DrawRoundedRectangle ", "Callback NULL!\r\n");
 		return;
 	}
 	
@@ -117,7 +117,7 @@ void LLOS_Graphic_DrawCircle(uint16_t x, uint16_t y, uint16_t r, ll_newState_t i
 {
 	if(ll_graphic_drawDotCB == NULL)
 	{
-		LOG_E("LLOS_Graphic_DrawCircle ", "Callback NULL!\r\n");
+		LL_LOG_E("LLOS_Graphic_DrawCircle ", "Callback NULL!\r\n");
 		return;
 	}
 	
@@ -192,7 +192,7 @@ void LLOS_Graphic_DrawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y
 {
 	if(ll_graphic_drawDotCB == NULL)
 	{
-		LOG_E("LLOS_Graphic_DrawTriangle ", "Callback NULL!\r\n");
+		LL_LOG_E("LLOS_Graphic_DrawTriangle ", "Callback NULL!\r\n");
 		return;
 	}
 	

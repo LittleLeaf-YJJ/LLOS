@@ -8,7 +8,7 @@ static ll_taskEvent_t Task1_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 {
 	if(events & LL_EVENT_MSG)
 	{
-		LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
+		LL_LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
 		LLOS_Msg_Clear(taskId);
 		return LL_EVENT_MSG;
 	}
@@ -31,7 +31,7 @@ void Task1_Init(void)
     task1Id = LLOS_Register_Events(Task1_Events);
     if(task1Id == LL_ERR_INVALID)
     {
-    	LOG_E("Task1 ", "init failed!\r\n");
+    	LL_LOG_E("Task1 ", "init failed!\r\n");
 		while(1);
     }
 	

@@ -89,7 +89,7 @@ void System_Init(void)
 	keyConfig[1].pinMask = PIN_KEY1;
 	LLOS_Key_Init(1, 10, 100, 800, keyConfig, 2, keyCB);
 	
-	LOG_I("Used memory pool size: %d\r\n", LLOS_MemoryPool_GetSize());
+	LL_LOG_I("Used memory pool size: %d\r\n", LLOS_MemoryPool_GetSize());
 }
 
 void System_Loop(void)

@@ -20,7 +20,7 @@ void Task1_Init(void)
     task1Id = LLOS_Register_Events(Task1_Events);
     if(task1Id == LL_ERR_INVALID)
     {
-    	LOG_E("Task1 ", "init failed!\r\n");
+    	LL_LOG_E("Task1 ", "init failed!\r\n");
 		while(1);
     }
 	LLOS_Start_Event(task1Id, 0x0001, LLOS_Ms_To_Tick(1000));

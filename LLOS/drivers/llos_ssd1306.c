@@ -56,7 +56,7 @@ void LLOS_SSD1306_HAL_Init(struct ll_SSD1306_conf_t *SSD1306_conf, uint8_t scree
 
 	if(SSD1306_conf == NULL || screenNum <= 0 || SSD1306_conf->devSPI_I2C == NULL)
 	{
-		LOG_E("LLOS_SSD1306_HAL_Init ", "para error!\r\n");
+		LL_LOG_E("LLOS_SSD1306_HAL_Init ", "para error!\r\n");
 		while(1);
 	}
 	
@@ -66,7 +66,7 @@ void LLOS_SSD1306_HAL_Init(struct ll_SSD1306_conf_t *SSD1306_conf, uint8_t scree
 	iSSD1306_conf = LLOS_malloc(size);
 	if(iSSD1306_conf == NULL)
 	{
-		LOG_E("LLOS_SSD1306_HAL_Init ", "SSD1306_conf malloc null!\r\n");
+		LL_LOG_E("LLOS_SSD1306_HAL_Init ", "SSD1306_conf malloc null!\r\n");
 		while(1);
 	}
 	memcpy(iSSD1306_conf, SSD1306_conf, size);
@@ -82,7 +82,7 @@ void LLOS_SSD1306_HAL_Select(uint8_t id)
 {
 	if(id >= ll_screenNum)
 	{
-		LOG_E("LLOS_SSD1306_Select ", "id >= ll_screenNum!\r\n");
+		LL_LOG_E("LLOS_SSD1306_Select ", "id >= ll_screenNum!\r\n");
 		return;
 	}
 	idN = id;
@@ -92,7 +92,7 @@ void LLOS_SSD1306_Init(struct ll_SSD1306_screenConf_t *screenConf)
 {
 	if(screenConf == NULL)
 	{
-		LOG_E("LLOS_SSD1306_Init ", "para NULL!\r\n");
+		LL_LOG_E("LLOS_SSD1306_Init ", "para NULL!\r\n");
 		while(1);
 	}
 

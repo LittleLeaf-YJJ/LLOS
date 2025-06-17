@@ -16,7 +16,7 @@ void LLOS_LED_Init(uint8_t timerN, uint16_t ms, struct ll_led_config_t *led_conf
 	
 	if(ms <= 0 || ledNum <= 0 || led_config == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "para NULL!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "para NULL!\r\n");
 		while(1);
 	}
 	
@@ -27,7 +27,7 @@ void LLOS_LED_Init(uint8_t timerN, uint16_t ms, struct ll_led_config_t *led_conf
 	ll_led_config = LLOS_malloc(size);
 	if(ll_led_config == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "led_config malloc null!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "led_config malloc null!\r\n");
 		while(1);
 	}
 	memcpy(ll_led_config, led_config, size);
@@ -39,7 +39,7 @@ void LLOS_LED_Set(uint8_t index, enum ll_led_t mode)
 {
 	if(index >= ll_ledNum || ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
 	{
-		LOG_E("LLOS_LED_Set ", "index >= ll_ledNum || port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
+		LL_LOG_E("LLOS_LED_Set ", "index >= ll_ledNum || port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
 		while(1);
 	}
 	
@@ -79,7 +79,7 @@ void LLOS_LED_Blink(uint8_t index, uint8_t num, uint8_t duty, uint16_t ms)
 {
 	if(index >= ll_ledNum || ll_led_config[index].port == 0 || ll_led_config[index].pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0)
 	{
-		LOG_E("LLOS_LED_Blink ", "index >= ll_ledNum || port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
+		LL_LOG_E("LLOS_LED_Blink ", "index >= ll_ledNum || port == 0 || pinMask == 0 || ll_ledNum <= 0 || ledTaskPeriod == 0!\r\n");
 		while(1);
 	}
 	

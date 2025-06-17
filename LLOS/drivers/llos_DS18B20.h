@@ -1,8 +1,8 @@
 /*
  * DS18B20驱动
  * 作者: LittleLeaf All rights reserved
- * 版本: V2.0.0
- * 修订日期: 2024/02/25
+ * 版本: V2.0.1
+ * 修订日期: 2025/05/16
  */
 #ifndef __LLOS_DS18B20_H
 #define __LLOS_DS18B20_H
@@ -12,6 +12,12 @@
 #ifdef __cplusplus
  extern "C" {
 #endif
+
+#define LL_DS18B20_ERR_SUCCESS		(0x00)
+#define LL_DS18B20_ERR_CRC			(0x01)
+#define LL_DS18B20_ERR_LOOP			(0x02)
+#define LL_DS18B20_ERR_GETFAILED	(0x03)
+#define LL_DS18B20_ERR_NREADY		(0xFF)
 
 enum ll_DS18B20_CMD_t
 {

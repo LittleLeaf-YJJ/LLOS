@@ -38,7 +38,7 @@ void LLOS_Key_Init(uint8_t timerN, uint16_t ms, uint16_t overTime, uint16_t long
 	
 	if(keyNum <= 0 || overTime <= 0 || longPressTime <= 0 || keyConfig == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "para error!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "para error!\r\n");
 		while(1);		
 	}
 	
@@ -50,7 +50,7 @@ void LLOS_Key_Init(uint8_t timerN, uint16_t ms, uint16_t overTime, uint16_t long
 	ll_keyWhich = LLOS_malloc(size);
 	if(ll_keyWhich == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "keyWhich malloc null!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "keyWhich malloc null!\r\n");
 		while(1);
 	}
 	
@@ -58,7 +58,7 @@ void LLOS_Key_Init(uint8_t timerN, uint16_t ms, uint16_t overTime, uint16_t long
 	ll_keyConfig = LLOS_malloc(size);
 	if(ll_keyConfig == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "keyConfig malloc null!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "keyConfig malloc null!\r\n");
 		while(1);
 	}
 	memcpy(ll_keyConfig, keyConfig, size);
@@ -67,7 +67,7 @@ void LLOS_Key_Init(uint8_t timerN, uint16_t ms, uint16_t overTime, uint16_t long
 	FSM_value = LLOS_malloc(size);
 	if(FSM_value == NULL)
 	{
-		LOG_E("LLOS_LED_Init ", "FSM_value malloc null!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "FSM_value malloc null!\r\n");
 		while(1);
 	}
 	memset(FSM_value, 0, size);

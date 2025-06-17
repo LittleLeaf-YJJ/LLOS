@@ -52,7 +52,7 @@ void System_Init(void)
 	Task0_Init();
 	Task1_Init();
 	
-	LOG_I("Task Num: %d\r\n", LLOS_Get_TaskNum());
+	LL_LOG_I("Task Num: %d\r\n", LLOS_Get_TaskNum());
 }
 
 void System_Loop(void)

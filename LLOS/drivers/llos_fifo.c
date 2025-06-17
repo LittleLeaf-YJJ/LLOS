@@ -7,12 +7,12 @@ ll_err_t LLOS_FIFO_Init(llos_fifo_t *fifo, uint8_t *buffer, uint32_t size)
 {
     if(size == 0 || (size & (4 - 1)) != 0 || ((size) & (size - 1)) != 0)
 	{
-		LOG_E("LLOS_FIFO_Init ", "size format error!\r\n");
+		LL_LOG_E("LLOS_FIFO_Init ", "size format error!\r\n");
 		return LL_ERR_PARA;
 	}
 	if(buffer == NULL)
 	{
-		LOG_E("LLOS_FIFO_Init ", "buffer null!\r\n");
+		LL_LOG_E("LLOS_FIFO_Init ", "buffer null!\r\n");
 		return LL_ERR_NULL;
 	}
 	
@@ -49,7 +49,7 @@ uint32_t LLOS_FIFO_Input(llos_fifo_t *fifo, const uint8_t *pData, uint32_t len)
 {
 	if(fifo == NULL || pData == NULL || len == 0)
 	{
-		LOG_E("LLOS_FIFO_Input ", "para error!\r\n");
+		LL_LOG_E("LLOS_FIFO_Input ", "para error!\r\n");
 		return 0;
 	}
 	
@@ -70,7 +70,7 @@ uint32_t LLOS_FIFO_Output(llos_fifo_t *fifo, uint8_t *pData, uint32_t len)
 {
 	if(fifo == NULL || pData == NULL || len == 0)
 	{
-		LOG_E("LLOS_FIFO_Output ", "para error!\r\n");
+		LL_LOG_E("LLOS_FIFO_Output ", "para error!\r\n");
 		return 0;
 	}
 	

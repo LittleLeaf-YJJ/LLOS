@@ -5,8 +5,8 @@
  * 响调度精度，所以建议尽可能地使用状态机对阻塞任务进行拆分。RTC闹钟和软件定时器的回调
  * 函数里不能有阻塞。
  * 作者: LittleLeaf All rights reserved
- * 版本: V2.0.2
- * 修订日期: 2025/03/08
+ * 版本: V2.1.0
+ * 修订日期: 2025/06/17
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -31,7 +31,7 @@
  extern "C" {
 #endif
 
-#define LLOS_VERSION		"V2.0.2"
+#define LLOS_VERSION		"V2.1.0"
 
 #define LL_EVENT_ALL		(0xFFFF)
 #define LL_EVENT_MSG		(0x8000)
@@ -56,9 +56,12 @@
           | (((uint32_t)(b1) & 0x00FF) << 8) \
           | (((uint32_t)(b2) & 0x00FF) << 16) \
           | (((uint32_t)(b3) & 0x00FF) << 24)))
-#define LL_SET_BIT(REG, BIT)     ((REG) |= (BIT))
-#define LL_CLEAR_BIT(REG, BIT)   ((REG) &= ~(BIT))
-#define LL_READ_BIT(REG, BIT)    ((REG) & (BIT))
+#define LL_BIT_SET(REG, BIT)			REG) |= (BIT))
+#define LL_BIT_CLEAR(REG, BIT)			((REG) &= ~(BIT))
+#define LL_BIT_READ(REG, BIT)			((REG) & (BIT))
+#define LL_LIMIT_MAX(variable, max)		do{if(variable > max)variable = max;}while(0)
+#define LL_LIMIT_MIN(variable, min)		do{if(variable < min)variable = min;}while(0)
+#define LL_LIMIT(variable, max, min)	do{if(variable > max)variable = max;else if(variable < min)variable = min;}while(0)
 
 #ifndef NULL
 #define NULL				((void *)0)
@@ -376,6 +379,7 @@ typedef struct ll_device
     ll_deviceId_t deviceId;						/* 设备ID, 0 - 254 */
 
 	ll_err_t (*initCB)   	(struct ll_device *dev, void *arg);
+	ll_err_t (*deInitCB)   	(struct ll_device *dev, void *arg);
 	ll_err_t (*openCB)   	(struct ll_device *dev, uint32_t cmd);
 	ll_err_t (*closeCB)  	(struct ll_device *dev);
 	ll_err_t (*readCB)   	(struct ll_device *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len);
@@ -422,6 +426,16 @@ ll_device_t *LLOS_Device_Find(const char *name);
  * 返回值: 错误码
  ====================================================================================*/
 ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg);
+
+/*====================================================================================
+ * 函数名: LLOS_Device_DeInit
+ * 描述: 反初始化设备
+ * 参数:
+ * 		dev: 设备句柄
+ * 		arg: 参数
+ * 返回值: 错误码
+ ====================================================================================*/
+ll_err_t LLOS_Device_DeInit(ll_device_t *dev, void *arg);
 
 /*====================================================================================
  * 函数名: LLOS_Device_Open

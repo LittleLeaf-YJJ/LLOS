@@ -74,6 +74,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 	ll_resolution = resolution;
 	
 	ll_DS18B20_Data.err = 0xFF;
+	ll_DS18B20_Data.temperature = -99.9f;
 	
 	if(ll_resolution == ll_DS18B20_CMD_Resolution_9Bits)
 	{
@@ -98,7 +99,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 	
 	if(ll_DS18B20_hw.devGPIO == NULL)
 	{
-		LOG_E("LLOS_DS18B20_Init: ", "dev == NULL\r\n");
+		LL_LOG_E("LLOS_DS18B20_Init: ", "dev == NULL\r\n");
 		return 1;
 	}
 	
@@ -107,15 +108,18 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 	
 	if(LLOS_DS18B20_RST())
 	{
-		LOG_E("LLOS_DS18B20_Init: ", "reset failed!\r\n");
+		LL_LOG_E("LLOS_DS18B20_Init: ", "reset failed!\r\n");
 		return 2;
 	}
 	
-	ds18b20TaskId = LLOS_Register_Events(Task_Events);
-    if(ds18b20TaskId == LL_ERR_INVALID)
+	if(ds18b20TaskId == LL_ERR_INVALID)
 	{
-		LOG_E("LLOS_DS18B20_Init: ", "ds18b20TaskId == LL_ERR_INVALID\r\n");
-		return 3;
+		ds18b20TaskId = LLOS_Register_Events(Task_Events);
+		if(ds18b20TaskId == LL_ERR_INVALID)
+		{
+			LL_LOG_E("LLOS_DS18B20_Init: ", "ds18b20TaskId == LL_ERR_INVALID\r\n");
+			return 3;
+		}
 	}
 	
 	LLOS_Start_Event(ds18b20TaskId, 0x02, LLOS_Ms_To_Tick(ll_period));			 /* 启动采样 */
@@ -141,6 +145,7 @@ uint64_t LLOS_DS18B20_ReadROM(void)
 
 ll_newState_t LLOS_DS18B20_GetAlarm(void)
 {
+    uint8_t var;
 	ll_newState_t flag = false;
 	
 	busy = true;
@@ -181,7 +186,7 @@ static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 {
 	if(events & LL_EVENT_MSG)
 	{
-		LOG_I("%s\r\n", (char *)LLOS_Msg_Receive(taskId));
+		LL_LOG_I("%s\r\n", (char *)LLOS_Msg_Receive(taskId));
 		LLOS_Msg_Clear(taskId);
 		
 		return LL_EVENT_MSG;
@@ -252,6 +257,8 @@ static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 
 ll_err_t LLOS_DS18B20_WriteEEPROM(void)
 {
+	uint8_t cfg;
+	
 	busy = true;
     if(!LLOS_DS18B20_RST())
     {

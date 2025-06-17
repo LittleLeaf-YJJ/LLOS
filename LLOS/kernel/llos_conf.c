@@ -20,7 +20,7 @@ ll_err_t LLOS_Cmd_Test(cmd_t *context)
 	if(LLOS_Cmd_ParamInt32(context, &c))return LL_ERR_FAILED;
 	if(LLOS_Cmd_ParamCopyText(context, s, 10))return LL_ERR_FAILED; 
 	
-	cmd_printf("*Test -> %d, %f, %d, %s\r\n", a, b, c, s);
+	ll_cmd_printf("*Test -> %d, %f, %d, %s\r\n", a, b, c, s);
 	LLOS_Cmd_ResultText(s);
 	
     return LL_ERR_SUCCESS;

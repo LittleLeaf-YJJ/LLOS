@@ -15,7 +15,7 @@ void LLOS_Device_Register_GPIO(void)
 	
 	if(LLOS_Register_Device(&dev) == LL_ERR_INVALID)
 	{
-		LOG_E("LLOS_Device_Register_GPIO ", "%s register failed!\r\n", dev.name);
+		LL_LOG_E("LLOS_Device_Register_GPIO ", "%s register failed!\r\n", dev.name);
 		while(1);
 	}
 }

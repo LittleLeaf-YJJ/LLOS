@@ -67,14 +67,14 @@ static void timerCB(uint8_t timerN)
 	
 	if(sec != ll_calendar.sec)
 	{
-		LOG_I("Timer ID: %d --- %04d-%02d-%02d %02d:%02d:%02d %d\r\n", timerN,
+		LL_LOG_I("Timer ID: %d --- %04d-%02d-%02d %02d:%02d:%02d %d\r\n", timerN,
 			ll_calendar.year, ll_calendar.mon, ll_calendar.day, ll_calendar.hour, ll_calendar.min, ll_calendar.sec, ll_calendar.week);
 	}
 }
 
 static void alarmCB(uint8_t alarmN)
 {
-	LOG_W("ALARM ", "ALARM!!! ID: %d\r\n", alarmN);
+	LL_LOG_W("ALARM ", "ALARM!!! ID: %d\r\n", alarmN);
 }
 
 int fputc(int ch, FILE *f)

@@ -20,7 +20,7 @@ void LLOS_Device_Register_SPI(void)
 	dev.ctrlCB = HW_SPI1_Ctrl;
 	if(LLOS_Register_Device(&dev) == LL_ERR_INVALID)
 	{
-		LOG_E("LLOS_Device_Register_SPI1 ", "%s register failed!\r\n", dev.name);
+		LL_LOG_E("LLOS_Device_Register_SPI1 ", "%s register failed!\r\n", dev.name);
 		while(1);
 	}
 }

@@ -70,12 +70,12 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	ll_memCfgs.poolSize = memCfg->poolSize;
 	if(ll_memCfgs.pPool == NULL)
 	{
-		LOG_E("LLOS_Init ", "memCfg->pPool NULL!\r\n");
+		LL_LOG_E("LLOS_Init ", "memCfg->pPool NULL!\r\n");
 		while(1);
 	}
 	if(ll_memCfgs.poolSize <= sizeof(uint32_t))
 	{
-		LOG_E("LLOS_Init ", "memCfg->poolSize <= sizeof(uint32_t)!\r\n");
+		LL_LOG_E("LLOS_Init ", "memCfg->poolSize <= sizeof(uint32_t)!\r\n");
 		while(1);
 	}
 	memset(ll_memCfgs.pPool, 0, ll_memCfgs.poolSize);
@@ -84,7 +84,7 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	eventCB_list = LLOS_malloc(size);
 	if(eventCB_list == NULL)
 	{
-		LOG_E("LLOS_Init ", "eventCB_list malloc null!\r\n");
+		LL_LOG_E("LLOS_Init ", "eventCB_list malloc null!\r\n");
 		while(1);
 	}
 	memset(eventCB_list, 0, size);
@@ -93,7 +93,7 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	msg_list = LLOS_malloc(size);
 	if(msg_list == NULL)
 	{
-		LOG_E("LLOS_Init ", "msg_list malloc null!\r\n");
+		LL_LOG_E("LLOS_Init ", "msg_list malloc null!\r\n");
 		while(1);
 	}
 	memset(msg_list, 0, size);
@@ -102,7 +102,7 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	timerCB_list = LLOS_malloc(size);
 	if(eventCB_list == NULL && ll_memCfgs.timerNum != 0)
 	{
-		LOG_E("LLOS_Init ", "timerCB_list malloc null!\r\n");
+		LL_LOG_E("LLOS_Init ", "timerCB_list malloc null!\r\n");
 		while(1);
 	}
 	memset(timerCB_list, 0, size);
@@ -111,7 +111,7 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	alarm_list = LLOS_malloc(size);
 	if(eventCB_list == NULL && ll_memCfgs.alarmNum != 0)
 	{
-		LOG_E("LLOS_Init ", "alarm_list malloc null!\r\n");
+		LL_LOG_E("LLOS_Init ", "alarm_list malloc null!\r\n");
 		while(1);
 	}
 	memset(alarm_list, 0, size);
@@ -120,24 +120,24 @@ void LLOS_Init(ll_system_reset_hook_t system_reset_hook, struct ll_init_delayCBs
 	device_list = LLOS_malloc(size);
 	if(device_list == NULL && ll_memCfgs.deviceNum != 0)
 	{
-		LOG_E("LLOS_Init ", "device_list malloc null!\r\n");
+		LL_LOG_E("LLOS_Init ", "device_list malloc null!\r\n");
 		while(1);
 	}
 	memset(device_list, 0, size);
 	
-	LOG_D("LLOS_Init ", "H  e  l  l  o   --     --  \r\n");
-	LOG_D("LLOS_Init ", "|      |      |    | |     \r\n");
-	LOG_D("LLOS_Init ", "|      |      |    |  --   \r\n");
-	LOG_D("LLOS_Init ", "|      |      |    |     | \r\n");
-	LOG_D("LLOS_Init ", " ----   ----    --    --   \r\n");
-	LOG_D("LLOS_Init ", "LLOS version: %s\r\n", LLOS_VERSION);
+	LL_LOG_D("LLOS_Init ", "H  e  l  l  o   --     --  \r\n");
+	LL_LOG_D("LLOS_Init ", "|      |      |    | |     \r\n");
+	LL_LOG_D("LLOS_Init ", "|      |      |    |  --   \r\n");
+	LL_LOG_D("LLOS_Init ", "|      |      |    |     | \r\n");
+	LL_LOG_D("LLOS_Init ", " ----   ----    --    --   \r\n");
+	LL_LOG_D("LLOS_Init ", "LLOS version: %s\r\n", LLOS_VERSION);
 }
 
 ll_taskId_t LLOS_Register_Events(ll_eventCB_t ll_eventCB)
 {
 	if(taskIndex >= 255)
 	{
-		LOG_E("LLOS_Register_Events: ", ">= 255!\r\n");
+		LL_LOG_E("LLOS_Register_Events: ", ">= 255!\r\n");
 		return LL_ERR_INVALID;
 	}
 
@@ -189,7 +189,7 @@ void LLOS_Start_Event(ll_taskId_t taskId, ll_taskEvent_t events, ll_tick_t tick)
 
 	if(taskId >= ll_memCfgs.taskNum)
 	{
-		LOG_E("LLOS_Start_Event: ", "> LL_TASK_NUM!\r\n");
+		LL_LOG_E("LLOS_Start_Event: ", "> LL_TASK_NUM!\r\n");
 		return;
 	}
 	
@@ -209,7 +209,7 @@ void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
 
 	if(taskId >= ll_memCfgs.taskNum)
 	{
-		LOG_E("LLOS_Stop_Event: ", "> LL_TASK_NUM!\r\n");
+		LL_LOG_E("LLOS_Stop_Event: ", "> LL_TASK_NUM!\r\n");
 		return;
 	}
 	
@@ -278,7 +278,7 @@ ll_err_t LLOS_Msg_Send(ll_taskId_t taskId, const void *pMsg)
 {
 	if(taskId >= ll_memCfgs.taskNum)
 	{
-		LOG_E("LLOS_Msg_Send: ", "> LL_TASK_NUM!\r\n");
+		LL_LOG_E("LLOS_Msg_Send: ", "> LL_TASK_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 	
@@ -295,7 +295,7 @@ ll_err_t LLOS_Msg_Clear(ll_taskId_t taskId)
 {
 	if(taskId >= ll_memCfgs.taskNum)
 	{
-		LOG_E("LLOS_Msg_Clear: ", "> LL_TASK_NUM!\r\n");
+		LL_LOG_E("LLOS_Msg_Clear: ", "> LL_TASK_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 	msg_list[taskId] = NULL;
@@ -312,7 +312,7 @@ void LLOS_DelayMs(uint32_t time)
 {
 	if(ll_osDelayCB.osDelayMs == NULL)
 	{
-		LOG_E("LLOS_DelayMs: ", "NULL!\r\n");
+		LL_LOG_E("LLOS_DelayMs: ", "NULL!\r\n");
 		return;
 	}
 	ll_osDelayCB.osDelayMs(time);
@@ -321,7 +321,7 @@ void LLOS_DelayUs(uint32_t time)
 {
 	if(ll_osDelayCB.osDelayUs == NULL)
 	{
-		LOG_E("LLOS_DelayUs: ", "NULL!\r\n");
+		LL_LOG_E("LLOS_DelayUs: ", "NULL!\r\n");
 		return;
 	}
 	ll_osDelayCB.osDelayUs(time);
@@ -331,7 +331,7 @@ ll_err_t LLOS_Timer_Set(uint8_t timerN, ll_newState_t newState, bool mode, ll_ti
 {
 	if(timerN >= ll_memCfgs.timerNum)
 	{
-		LOG_E("LLOS_Timer_Set: ", "> LL_TIMER_NUM!\r\n");
+		LL_LOG_E("LLOS_Timer_Set: ", "> LL_TIMER_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 
@@ -442,7 +442,7 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 
 	if(alarmN >= ll_memCfgs.alarmNum)
 	{
-		LOG_E("LLOS_RTC_SetAlarm: ", "> LL_ALARM_NUM!\r\n");
+		LL_LOG_E("LLOS_RTC_SetAlarm: ", "> LL_ALARM_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 
@@ -597,7 +597,7 @@ void LLOS_ErrorHandler(uint8_t errCode)
 {
 	if(ll_errHandler_hook == NULL)
 	{
-		LOG_E("LLOS_ErrorHandler: ", "NULL!\r\n");
+		LL_LOG_E("LLOS_ErrorHandler: ", "NULL!\r\n");
 		return;
 	}
 	ll_errHandler_hook(errCode);
@@ -606,7 +606,7 @@ void LLOS_System_Reset(void)
 {
 	if(ll_system_reset_hook == NULL)
 	{
-		LOG_E("LLOS_System_Reset: ", "NULL!\r\n");
+		LL_LOG_E("LLOS_System_Reset: ", "NULL!\r\n");
 		return;
 	}
 	ll_system_reset_hook();
@@ -622,7 +622,7 @@ ll_deviceId_t LLOS_Register_Device(ll_device_t *dev)
 {
 	if(deviceIndex >= ll_memCfgs.deviceNum)
 	{
-		LOG_E("LLOS_Register_Device: ", "> LL_DEV_MAX_NUM!\r\n");
+		LL_LOG_E("LLOS_Register_Device: ", "> LL_DEV_MAX_NUM!\r\n");
 		return LL_ERR_INVALID;
 	}
 
@@ -630,6 +630,7 @@ ll_deviceId_t LLOS_Register_Device(ll_device_t *dev)
 	device_list[deviceIndex].name = dev->name;
 
 	device_list[deviceIndex].initCB = dev->initCB;
+	device_list[deviceIndex].deInitCB = dev->deInitCB;
 	device_list[deviceIndex].openCB = dev->openCB;
 	device_list[deviceIndex].closeCB = dev->closeCB;
 	device_list[deviceIndex].readCB = dev->readCB;
@@ -667,16 +668,25 @@ ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg)
 {
 	if(dev == NULL || dev->initCB == NULL)
 	{
-		LOG_E("LLOS_Device_Init: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_Init: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->initCB(dev, arg);
+}
+ll_err_t LLOS_Device_DeInit(ll_device_t *dev, void *arg)
+{
+	if(dev == NULL || dev->deInitCB == NULL)
+	{
+		LL_LOG_E("LLOS_Device_DeInit: ", "dev == NULL!\r\n");
+		return LL_ERR_NULL;
+	}
+	return dev->deInitCB(dev, arg);
 }
 ll_err_t LLOS_Device_Open(ll_device_t *dev, uint32_t cmd)
 {
 	if(dev == NULL || dev->openCB == NULL)
 	{
-		LOG_E("LLOS_Device_Open: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_Open: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	dev->isOpen  = true;
@@ -686,7 +696,7 @@ ll_err_t LLOS_Device_Close(ll_device_t *dev)
 {
 	if(dev == NULL || dev->closeCB == NULL)
 	{
-		LOG_E("LLOS_Device_Close: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_Close: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	dev->isOpen  = false;
@@ -696,7 +706,7 @@ ll_err_t LLOS_Device_Read(ll_device_t *dev, uint32_t address, uint32_t offset, v
 {
 	if(dev == NULL || dev->readCB == NULL)
 	{
-		LOG_E("LLOS_Device_Read: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_Read: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->readCB(dev, address, offset, buffer, len);
@@ -705,7 +715,7 @@ ll_err_t LLOS_Device_Write(ll_device_t *dev, uint32_t address, uint32_t offset, 
 {
 	if(dev == NULL || dev->writeCB == NULL)
 	{
-		LOG_E("LLOS_Device_Write: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_Write: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->writeCB(dev, address, offset, buffer, len);
@@ -714,7 +724,7 @@ ll_err_t LLOS_Device_WriteRead(ll_device_t *dev, uint32_t address, uint32_t offs
 {
 	if(dev == NULL || dev->write_readCB == NULL)
 	{
-		LOG_E("LLOS_Device_WriteRead: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_WriteRead: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->write_readCB(dev, address, offset, writeData, readData, len);
@@ -723,7 +733,7 @@ uint32_t LLOS_Device_ReadPin(ll_device_t *dev, uint32_t pin)
 {
 	if(dev == NULL || dev->readPinCB == NULL)
 	{
-		LOG_E("LLOS_Device_ReadPin: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_ReadPin: ", "dev == NULL!\r\n");
 		return 0xFFFFFFFF;
 	}
 	return dev->readPinCB(dev, pin);
@@ -732,7 +742,7 @@ ll_err_t LLOS_Device_WritePin(ll_device_t *dev, uint32_t pin, ll_bit_t newState)
 {
 	if(dev == NULL || dev->writePinCB == NULL)
 	{
-		LOG_E("LLOS_Device_WritePin: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_WritePin: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->writePinCB(dev, pin, newState);
@@ -741,7 +751,7 @@ ll_err_t LLOS_Device_DMARead(ll_device_t *dev, uint32_t address, uint32_t offset
 {
 	if(dev == NULL || dev->DMA_readCB == NULL)
 	{
-		LOG_E("LLOS_Device_DMARead: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_DMARead: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->DMA_readCB(dev, address, offset, buffer, len);
@@ -750,7 +760,7 @@ ll_err_t LLOS_Device_DMAWrite(ll_device_t *dev, uint32_t address, uint32_t offse
 {
 	if(dev == NULL || dev->DMA_writeCB == NULL)
 	{
-		LOG_E("LLOS_Device_DMAWrite: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_DMAWrite: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->DMA_writeCB(dev, address, offset, buffer, len);
@@ -759,7 +769,7 @@ ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg)
 {
 	if(dev == NULL || dev->ctrlCB == NULL)
 	{
-		LOG_E("LLOS_Device_Ctrl: ", "dev == NULL!\r\n");
+		LL_LOG_E("LLOS_Device_Ctrl: ", "dev == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	return dev->ctrlCB(dev, cmd, arg);
@@ -821,7 +831,7 @@ static const char *pvid, *ppid, *pversion, *psn;
 
 ll_err_t LLOS_Cmd_IDN(cmd_t *context)
 {
-	cmd_printf("%s,%s,%s,%s\r\n", pvid, ppid, pversion, psn);
+	ll_cmd_printf("%s,%s,%s,%s\r\n", pvid, ppid, pversion, psn);
 	
 	return LL_ERR_SUCCESS;
 }
@@ -853,7 +863,7 @@ void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const cha
 	ll_cmd_bufSize = bufSize;
 	if(ll_cmd_bufSize <= sizeof(char))
 	{
-		LOG_E("LLOS_Cmd_Init ", "bufSize <= sizeof(char)");
+		LL_LOG_E("LLOS_Cmd_Init ", "bufSize <= sizeof(char)");
 		while(1);
 	}
 
@@ -861,7 +871,7 @@ void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const cha
 	context.buffer = LLOS_malloc(size);
 	if(context.buffer == NULL)
 	{
-		LOG_E("LLOS_Cmd_Init ", "context.buffer malloc null!\r\n");
+		LL_LOG_E("LLOS_Cmd_Init ", "context.buffer malloc null!\r\n");
 		while(1);
 	}
 	
@@ -886,7 +896,7 @@ bool LLOS_Cmd_Input(const char *data, uint32_t len)
             if(context.len > 0 && cmdList[i].callback != NULL)
 			{
 				ll_err_t errCode = cmdList[i].callback(&context);				/* 执行回调 */
-				if(errCode)LOG_E("LLOS CMD ERR: ", "0x%02X\r\n", errCode);
+				if(errCode)LL_LOG_E("LLOS CMD ERR: ", "0x%02X\r\n", errCode);
 				isFound = true;
 			}
             break;
@@ -901,7 +911,7 @@ static void Trim(char *str)
 {
 	if(str == NULL)
 	{
-		LOG_E("Trim: ", "str == NULL!\r\n");
+		LL_LOG_E("Trim: ", "str == NULL!\r\n");
 		return;
 	}
 	
@@ -909,7 +919,7 @@ static void Trim(char *str)
     while(*p == ' ' || *p == ',')p++;
 	if(*p == '\0')
 	{
-		LOG_E("Trim: ", "No space!\r\n");
+		LL_LOG_E("Trim: ", "No space!\r\n");
 		return;
 	}
 	strcpy(str, p);
@@ -919,7 +929,7 @@ ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val)
 {
 	if(val == NULL)
 	{
-		LOG_E("LLOS_Cmd_ParamBool: ", "Parameter == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamBool: ", "Parameter == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	
@@ -930,7 +940,7 @@ ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val)
 
     if(*context->buffer == '\0')
 	{
-		LOG_E("LLOS_Cmd_ParamBool: ", "context->buffer == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamBool: ", "context->buffer == NULL!\r\n");
 		return LL_ERR_FAILED;
 	}
 
@@ -965,7 +975,7 @@ ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val)
 		goto label;
     }
 	
-	LOG_E("LLOS_Cmd_ParamBool: ", "Parameter error!\r\n");
+	LL_LOG_E("LLOS_Cmd_ParamBool: ", "Parameter error!\r\n");
 	return LL_ERR_FAILED;
 	
 	label:
@@ -976,7 +986,7 @@ ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val)
 {
 	if(val == NULL)
 	{
-		LOG_E("LLOS_Cmd_ParamFloat: ", "Parameter == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamFloat: ", "Parameter == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	
@@ -987,7 +997,7 @@ ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val)
     
 	if(*context->buffer == '\0')
 	{
-		LOG_E("LLOS_Cmd_ParamFloat: ", "context->buffer == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamFloat: ", "context->buffer == NULL!\r\n");
 		return LL_ERR_FAILED;
 	}
 
@@ -995,7 +1005,7 @@ ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val)
 	
     if(endptr == context->buffer)
 	{
-		LOG_E("LLOS_Cmd_ParamFloat: ", "context->buffer == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamFloat: ", "context->buffer == NULL!\r\n");
 		return LL_ERR_FAILED;
 	}
 	
@@ -1011,7 +1021,7 @@ ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val)
 {
 	if(val == NULL)
 	{
-		LOG_E("LLOS_Cmd_ParamInt32: ", "Parameter == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamInt32: ", "Parameter == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	
@@ -1022,7 +1032,7 @@ ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val)
 
     if(*context->buffer == '\0')
 	{
-		LOG_E("LLOS_Cmd_ParamInt32: ", "context->buffer == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamInt32: ", "context->buffer == NULL!\r\n");
 		return LL_ERR_FAILED;
 	}
 	
@@ -1030,7 +1040,7 @@ ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val)
 
     if(endptr == context->buffer)
 	{
-		LOG_E("LLOS_Cmd_ParamInt32: ", "context->buffer == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamInt32: ", "context->buffer == NULL!\r\n");
 		return LL_ERR_FAILED;
 	}
 
@@ -1046,7 +1056,7 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
 {
 	if(text == NULL || copy_len == 0)
 	{
-		LOG_E("LLOS_Cmd_ParamCopyText: ", "Parameter == NULL!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamCopyText: ", "Parameter == NULL!\r\n");
 		return LL_ERR_NULL;
 	}
 	
@@ -1058,7 +1068,7 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
     if(start == NULL) 
     {
 		text[0] = '\0';
-		LOG_E("LLOS_Cmd_ParamCopyText: ", "Parameter format error!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamCopyText: ", "Parameter format error!\r\n");
 		return LL_ERR_FAILED;
 	}
     
@@ -1068,13 +1078,14 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
     if(end == NULL) 
     {
 		text[0] = '\0';
-		LOG_E("LLOS_Cmd_ParamCopyText: ", "Parameter format error!\r\n");
+		LL_LOG_E("LLOS_Cmd_ParamCopyText: ", "Parameter format error!\r\n");
 		return LL_ERR_FAILED;
     }
 
     uint32_t textLen = (uint32_t)(end - start);
-	if(textLen > context->len)textLen = context->len;
-    if(textLen > copy_len)textLen = copy_len;
+
+	LL_LIMIT_MAX(textLen, context->len);
+	LL_LIMIT_MAX(textLen, copy_len);
 	
     strncpy(text, start, textLen);
     text[textLen] = '\0';
@@ -1084,21 +1095,21 @@ ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
 
 void LLOS_Cmd_ResultBool(bool val)
 {
-	cmd_printf("%d\r\n", val);
+	ll_cmd_printf("%d\r\n", val);
 }
 void LLOS_Cmd_ResultFloat(float val)
 {
-	cmd_printf("%f\r\n", val);
+	ll_cmd_printf("%f\r\n", val);
 }
 void LLOS_Cmd_ResultInt32(int32_t val)
 {
-	cmd_printf("%d\r\n", val);
+	ll_cmd_printf("%d\r\n", val);
 }
 void LLOS_Cmd_ResultUInt32(uint32_t val)
 {
-	cmd_printf("%u\r\n", val);
+	ll_cmd_printf("%u\r\n", val);
 }
 void LLOS_Cmd_ResultText(char *val)
 {
-	cmd_printf("%s\r\n", val);
+	ll_cmd_printf("%s\r\n", val);
 }

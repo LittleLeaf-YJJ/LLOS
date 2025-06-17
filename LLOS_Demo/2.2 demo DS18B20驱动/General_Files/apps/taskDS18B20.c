@@ -11,13 +11,13 @@ static ll_taskEvent_t Task_DS18B20_Events(ll_taskId_t taskId, ll_taskEvent_t eve
 {
 	if(events & LL_EVENT_MSG)
 	{
-		LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
+		LL_LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
 		LLOS_Msg_Clear(taskId);
 		return LL_EVENT_MSG;
 	}
 	if(events & TASK_DS18B20_EVENT_LOOP)
 	{
-		LOG_I("Temperature: %.1f\r\n", ll_DS18B20_Data.temperature);
+		LL_LOG_I("Temperature: %.1f\r\n", ll_DS18B20_Data.temperature);
 	    LLOS_Start_Event(taskDS18B20Id, TASK_DS18B20_EVENT_LOOP, LLOS_Ms_To_Tick(1000));
 		return TASK_DS18B20_EVENT_LOOP;
 	}
@@ -33,14 +33,14 @@ void Task_DS18B20_Init(void)
 	devDS18B20 = LLOS_Device_Find(PORT_DS18B20);
 	if(devDS18B20 == NULL)
 	{
-		LOG_E("Task_DS18B20_Init ", "GPIO Not Found!\r\n");
+		LL_LOG_E("Task_DS18B20_Init ", "GPIO Not Found!\r\n");
 		while(1);
 	}
 	
     taskDS18B20Id = LLOS_Register_Events(Task_DS18B20_Events);
     if(taskDS18B20Id == LL_ERR_INVALID)
     {
-    	LOG_E("Task_DS18B20_Init ", "init failed!\r\n");
+    	LL_LOG_E("Task_DS18B20_Init ", "init failed!\r\n");
 		while(1);
     }
 	
@@ -49,7 +49,7 @@ void Task_DS18B20_Init(void)
 	err = LLOS_DS18B20_Init(ll_DS18B20_CMD_Resolution_9Bits, 100);
 	if(err != LL_ERR_SUCCESS)
 	{
-		LOG_E("Task_DS18B20_Init ", "init failed! err: %d\r\n", err);
+		LL_LOG_E("Task_DS18B20_Init ", "init failed! err: %d\r\n", err);
 	}
 	else
 	{

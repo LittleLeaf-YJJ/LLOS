@@ -21,7 +21,7 @@ static ll_taskEvent_t Task0_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 {
 	if(events & LL_EVENT_MSG)
 	{
-		LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
+		LL_LOG_I("task%d receive message: %s\r\n", taskId, (char *)LLOS_Msg_Receive(taskId));
 		LLOS_Msg_Clear(taskId);
 		return LL_EVENT_MSG;
 	}
@@ -77,26 +77,26 @@ void TaskDisplay_Init(void)
     taskDisplayId = LLOS_Register_Events(Task0_Events);
     if(taskDisplayId == LL_ERR_INVALID)
     {
-    	LOG_E("%s ", "init failed!\r\n", __FUNCTION__);
+    	LL_LOG_E("%s ", "init failed!\r\n", __FUNCTION__);
 		while(1);
     }
 
 	devGPIOA = LLOS_Device_Find("GPIOA");
 	if(devGPIOA == NULL)
 	{
-    	LOG_E("%s ", "GPIOA Not Found!\r\n", __FUNCTION__);
+    	LL_LOG_E("%s ", "GPIOA Not Found!\r\n", __FUNCTION__);
 		while(1);
 	}
 	devSPI1 = LLOS_Device_Find("SPI1");
 	if(devSPI1 == NULL)
 	{
-    	LOG_E("%s ", "SPI1 Not Found!\r\n", __FUNCTION__);
+    	LL_LOG_E("%s ", "SPI1 Not Found!\r\n", __FUNCTION__);
 		while(1);
 	}
 	devI2C2 = LLOS_Device_Find("I2C2");
 	if(devI2C2 == NULL)
 	{
-    	LOG_E("%s ", "I2C2 Not Found!\r\n", __FUNCTION__);
+    	LL_LOG_E("%s ", "I2C2 Not Found!\r\n", __FUNCTION__);
 		while(1);
 	}
 	
