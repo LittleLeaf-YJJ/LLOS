@@ -1,3 +1,6 @@
+ /* 
+ * @author LittleLeaf All rights reserved
+ */
 #include <llos_graphic.h>
 
 static ll_graphic_drawDotCB_t ll_graphic_drawDotCB;

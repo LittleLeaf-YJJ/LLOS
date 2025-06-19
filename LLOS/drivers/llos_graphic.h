@@ -1,8 +1,8 @@
 /*
  * 绘图模块
- * 作者: LittleLeaf All rights reserved
- * 版本: V1.0.0
- * 修订日期: 2025/03/08
+ * @author LittleLeaf All rights reserved
+ * @version V1.0.0
+ * @date 2025/03/08
  */
 #ifndef __LLOS_GRAPHIC_H
 #define __LLOS_GRAPHIC_H

@@ -1,8 +1,8 @@
 /*
  * CRC通用驱动。
- * 作者: LittleLeaf All rights reserved
- * 版本: V1.0.1
- * 修订日期: 2022/01/21
+ * @author LittleLeaf All rights reserved
+ * @version V1.0.1
+ * @date 2022/01/21
  */
 #ifndef __LLOS_CRC_H
 #define __LLOS_CRC_H
@@ -15,7 +15,7 @@
  extern "C" {
 #endif
 	 
-#define CRC_USE_MODEL			(1)
+#define LL_CRC_USE_MODEL			(1)
 
 struct ll_crc_confStruct_t
 {
@@ -27,15 +27,13 @@ struct ll_crc_confStruct_t
 	bool isReverseOutput;
 };
 
-/*====================================================================================
- * 函数名: LLOS_CRC_CAL
- * 描述: CRC计算函数
- * 参数:
- *		crc_confStruct: CRC配置结构体
- *		pData: 要校验的数据
- * 		len: 要校验的数据的长度
- * 返回值: CRC计算结果
- ====================================================================================*/
+/**
+ * @brief CRC计算函数
+ * @param[in] crc_confStruct: CRC配置结构体，可以使用CRC预设模型
+ * @param[in] pData: 要校验的数据
+ * @param[in] len: 要校验的数据的长度
+ * @return CRC计算结果
+*/
 uint32_t LLOS_CRC_CAL(struct ll_crc_confStruct_t *crc_confStruct, uint8_t *pData, uint32_t len);
 
 /* CRC预设模型 */

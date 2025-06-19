@@ -1,9 +1,9 @@
  /* 
- * 作者: LittleLeaf All rights reserved
+ * @author LittleLeaf All rights reserved
  */
 #include <llos_crc.h>
 
-#if CRC_USE_MODEL
+#if LL_CRC_USE_MODEL
 struct ll_crc_confStruct_t ll_crcModel_CRC4_ITU = {.initVal = 0x00, .finalXOR = 0x00,.poly = 0x03, .width = 4, .isReverseInput = true, .isReverseOutput = true};
 struct ll_crc_confStruct_t ll_crcModel_CRC5_EPC = {.initVal = 0x09, .finalXOR = 0x00,.poly = 0x09, .width = 5, .isReverseInput = false, .isReverseOutput = false};
 struct ll_crc_confStruct_t ll_crcModel_CRC5_ITU = {.initVal = 0x00, .finalXOR = 0x00,.poly = 0x15, .width = 5, .isReverseInput = true, .isReverseOutput = true};

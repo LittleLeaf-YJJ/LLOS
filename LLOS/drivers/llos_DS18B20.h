@@ -1,8 +1,8 @@
 /*
  * DS18B20驱动
- * 作者: LittleLeaf All rights reserved
- * 版本: V2.0.1
- * 修订日期: 2025/05/16
+ * @author LittleLeaf All rights reserved
+ * @version V2.0.1
+ * @date 2025/05/16
  */
 #ifndef __LLOS_DS18B20_H
 #define __LLOS_DS18B20_H
@@ -57,37 +57,32 @@ struct ll_DS18B20_Data_t
 	ll_err_t err;
 };
 
-/*====================================================================================
- * 函数名: LLOS_DS18B20_Init
- * 描述: 初始化，初始化前请先填充ll_DS18B20_hw结构体，从ll_DS18B20_Data获取数据
- * 参数:
- * 		resolution: 分辨率
- *		ms: 采样周期, 要求100ms以上
- * 返回值: 错误码
- ====================================================================================*/
 extern struct ll_DS18B20_hw_t ll_DS18B20_hw;
 extern struct ll_DS18B20_Data_t ll_DS18B20_Data;
+/**
+ * @brief 初始化，初始化前请先填充@ll_DS18B20_hw结构体，从@ll_DS18B20_Data获取数据
+ * @param resolution: 分辨率
+ * @param ms: 采样周期, 要求100ms以上
+ * @return 错误码
+*/
 ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t ms);
 
-/*====================================================================================
- * 函数名: LLOS_DS18B20_ReadROM
- * 描述: 读取64位ID
- * 返回值: 64位ID
- ====================================================================================*/
+/**
+ * @brief 读取64位ID
+ * @return 64位ID
+*/
 uint64_t LLOS_DS18B20_ReadROM(void);
 
-/*====================================================================================
- * 函数名: LLOS_DS18B20_GetAlarm
- * 描述: 获取温度报警标志
- * 返回值: 是否报警
- ====================================================================================*/
+/**
+ * @brief 获取温度报警标志
+ * @return 是否报警
+*/
 ll_newState_t LLOS_DS18B20_GetAlarm(void);
 
-/*====================================================================================
- * 函数名: LLOS_DS18B20_WriteEEPROM
- * 描述: 写EEPROM，填充ll_DS18B20_Data结构体后执行该函数
- * 返回值: 错误码
- ====================================================================================*/
+/**
+ * @brief 写EEPROM，填充ll_DS18B20_Data结构体后执行该函数
+ * @return 错误码
+*/
 ll_err_t LLOS_DS18B20_WriteEEPROM(void);
 
 #ifdef __cplusplus

@@ -1,5 +1,5 @@
 /*
- * 作者: LittleLeaf All rights reserved
+ * @author LittleLeaf All rights reserved
  */
 #include <llos_ssd1306.h>
 #include <llos_ssd1306_font.h>
