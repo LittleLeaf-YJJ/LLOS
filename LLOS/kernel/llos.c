@@ -49,7 +49,7 @@ static void const **msg_list;
 static struct ll_timerCB_list_t *timerCB_list;
 static struct ll_alarm_list_t *alarm_list;
 static ll_device_t *device_list;
-static cmd_t context;
+static ll_cmd_t context;
 
 struct ll_calendar_t ll_calendar;
 
@@ -829,13 +829,13 @@ ll_err_t LLOS_Device_Ctrl(ll_device_t *dev, uint32_t cmd, void *arg)
 	
 static const char *pvid, *ppid, *pversion, *psn;
 
-ll_err_t LLOS_Cmd_IDN(cmd_t *context)
+ll_err_t LLOS_Cmd_IDN(ll_cmd_t *context)
 {
 	ll_cmd_printf("%s,%s,%s,%s\r\n", pvid, ppid, pversion, psn);
 	
 	return LL_ERR_SUCCESS;
 }
-ll_err_t LLOS_Cmd_RST(cmd_t *context)
+ll_err_t LLOS_Cmd_RST(ll_cmd_t *context)
 {
 	LLOS_System_Reset();
     return LL_ERR_SUCCESS;
@@ -925,7 +925,7 @@ static void Trim(char *str)
 	strcpy(str, p);
 }
 
-ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val)
+ll_err_t LLOS_Cmd_ParamBool(ll_cmd_t *context, bool *val)
 {
 	if(val == NULL)
 	{
@@ -982,7 +982,7 @@ ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val)
 		strcpy(context->buffer, endptr);
         return LL_ERR_SUCCESS;
 }
-ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val)
+ll_err_t LLOS_Cmd_ParamFloat(ll_cmd_t *context, float *val)
 {
 	if(val == NULL)
 	{
@@ -1017,7 +1017,7 @@ ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val)
 
     return LL_ERR_SUCCESS;
 }
-ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val)
+ll_err_t LLOS_Cmd_ParamInt32(ll_cmd_t *context, int32_t *val)
 {
 	if(val == NULL)
 	{
@@ -1052,7 +1052,7 @@ ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val)
 
     return LL_ERR_SUCCESS;
 }
-ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len)
+ll_err_t LLOS_Cmd_ParamCopyText(ll_cmd_t *context, char *text, uint32_t copy_len)
 {
 	if(text == NULL || copy_len == 0)
 	{

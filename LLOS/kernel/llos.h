@@ -485,11 +485,11 @@ typedef struct
 {
 	char *buffer;
 	uint32_t len;
-}cmd_t;
+}ll_cmd_t;
 struct cmdList_t
 {
 	const char *pattern;
-	ll_err_t (*callback)(cmd_t *context);
+	ll_err_t (*callback)(ll_cmd_t *context);
 };
 
 /**
@@ -516,7 +516,7 @@ bool LLOS_Cmd_Input(const char *data, uint32_t len);
  * @param[out] val: 获取到的数据
  * @return 错误码
  */
-ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val);
+ll_err_t LLOS_Cmd_ParamBool(ll_cmd_t *context, bool *val);
 
 /**
  * @brief 获取float类型的数据
@@ -524,7 +524,7 @@ ll_err_t LLOS_Cmd_ParamBool(cmd_t *context, bool *val);
  * @param[out] val: 获取到的数据
  * @return 错误码
  */
-ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val);
+ll_err_t LLOS_Cmd_ParamFloat(ll_cmd_t *context, float *val);
 	
 /**
  * @brief 获取int32类型的数据
@@ -532,7 +532,7 @@ ll_err_t LLOS_Cmd_ParamFloat(cmd_t *context, float *val);
  * @param[out] val: 获取到的数据
  * @return 错误码
  */
-ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val);
+ll_err_t LLOS_Cmd_ParamInt32(ll_cmd_t *context, int32_t *val);
 
 /**
  * @brief 获取字符串类型的数据，sizeof(text) > copy_len
@@ -541,7 +541,7 @@ ll_err_t LLOS_Cmd_ParamInt32(cmd_t *context, int32_t *val);
  * @param[in] len: 需要获取的字符串长度
  * @return 错误码
  */
-ll_err_t LLOS_Cmd_ParamCopyText(cmd_t *context, char *text, uint32_t copy_len);
+ll_err_t LLOS_Cmd_ParamCopyText(ll_cmd_t *context, char *text, uint32_t copy_len);
 
 /**
  * @brief 输出对应类型的值

@@ -4,10 +4,10 @@
 #include <llos.h>
 
 /* =====================================[指令解析框架]====================================== */
-extern ll_err_t LLOS_Cmd_IDN(cmd_t *context);
-extern ll_err_t LLOS_Cmd_RST(cmd_t *context);
+extern ll_err_t LLOS_Cmd_IDN(ll_cmd_t *context);
+extern ll_err_t LLOS_Cmd_RST(ll_cmd_t *context);
 
-ll_err_t LLOS_Cmd_Test(cmd_t *context)
+ll_err_t LLOS_Cmd_Test(ll_cmd_t *context)
 {
 	/* 测试指令 *Test FALSE,2.66mV,-2kA,"Hello world!" */
 	bool a;
@@ -26,7 +26,7 @@ ll_err_t LLOS_Cmd_Test(cmd_t *context)
     return LL_ERR_SUCCESS;
 }
 
-ll_err_t LLOS_Cmd_Factory(cmd_t *context)
+ll_err_t LLOS_Cmd_Factory(ll_cmd_t *context)
 {
 	// user code
 	
