@@ -153,26 +153,27 @@ void LLOS_Loop(void)
 	for(i = 0; i < taskIndex; i++)
 	{
 		/* 更新事件状态 */
-		eventCB_list[i].oldEvents |= eventCB_list[i].newEvents;
+		LL_BIT_SET(eventCB_list[i].oldEvents, eventCB_list[i].newEvents);
 		eventCB_list[i].newEvents = 0;
-		eventCB_list[i].oldActivation |= eventCB_list[i].newActivation;
+		LL_BIT_SET(eventCB_list[i].oldActivation, eventCB_list[i].newActivation);
 		eventCB_list[i].newActivation = 0;
 		if(eventCB_list[i].eventCB == NULL)continue;
 		
 		for(j = 15; j >= 0; j--) /* 从0x8000开始保证消息事件的优先级最高  */
 		{
 			/* 如果事件已激活&&系统节拍大于该事件的启动节拍则执行该事件 */
-			if(eventCB_list[i].oldActivation & LL_EVENT(j) && sysTick >= eventCB_list[i].startTick[j])
+			
+			if(LL_BIT_READ(eventCB_list[i].oldActivation, LL_EVENT(j)) && sysTick >= eventCB_list[i].startTick[j])
 			{
+				uint16_t event = LL_BIT_READ(eventCB_list[i].oldEvents, LL_EVENT(j));
+				
 				/* 启动对应的事件并且清除返回的事件 */
-				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & LL_EVENT(j), ll_disable);
-				eventCB_list[i].oldEvents ^= eventCB_list[i].eventCB(i, eventCB_list[i].oldEvents & LL_EVENT(j));
-				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & LL_EVENT(j), ll_enable);
+				if(ll_LP_CB != NULL)ll_LP_CB(i, event, ll_disable);
+				eventCB_list[i].oldEvents ^= eventCB_list[i].eventCB(i, event);
+				if(ll_LP_CB != NULL)ll_LP_CB(i, event, ll_enable);
 				/* 如果事件标志已被清除则取消激活该事件 */
 				if((eventCB_list[i].oldEvents & LL_EVENT(j)) == 0x0000)
-				{
-					eventCB_list[i].oldActivation &= ~LL_EVENT(j);
-				}
+					LL_BIT_CLEAR(eventCB_list[i].oldActivation, LL_EVENT(j));
 			}
 		}
 	}

@@ -57,7 +57,7 @@
           | (((uint32_t)(b2) & 0x00FF) << 16) \
           | (((uint32_t)(b3) & 0x00FF) << 24)))
 		  
-#define LL_BIT_SET(REG, BIT)			REG) |= (BIT))
+#define LL_BIT_SET(REG, BIT)			((REG) |= (BIT))
 #define LL_BIT_CLEAR(REG, BIT)			((REG) &= ~(BIT))
 #define LL_BIT_READ(REG, BIT)			((REG) & (BIT))
 
