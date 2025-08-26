@@ -162,7 +162,6 @@ void LLOS_Loop(void)
 		for(j = 15; j >= 0; j--) /* 从0x8000开始保证消息事件的优先级最高  */
 		{
 			/* 如果事件已激活&&系统节拍大于该事件的启动节拍则执行该事件 */
-			
 			if(LL_BIT_READ(eventCB_list[i].oldActivation, LL_EVENT(j)) && sysTick >= eventCB_list[i].startTick[j])
 			{
 				uint16_t event = LL_BIT_READ(eventCB_list[i].oldEvents, LL_EVENT(j));
