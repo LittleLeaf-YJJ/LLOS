@@ -73,7 +73,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 {
 	ll_resolution = resolution;
 	
-	ll_DS18B20_Data.err = 0xFF;
+	ll_DS18B20_Data.err = LL_DS18B20_ERR_SUCCESS;
 	ll_DS18B20_Data.temperature = -99.9f;
 	
 	if(ll_resolution == ll_DS18B20_CMD_Resolution_9Bits)
@@ -100,7 +100,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 	if(ll_DS18B20_hw.devGPIO == NULL)
 	{
 		LL_LOG_E("LLOS_DS18B20_Init: ", "dev == NULL\r\n");
-		return 1;
+		return LL_DS18B20_ERR_HW;
 	}
 	
     LLOS_Device_WritePin(ll_DS18B20_hw.devGPIO, ll_DS18B20_hw.pinDQ, ll_set); /* 释放总线 */
@@ -109,7 +109,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 	if(LLOS_DS18B20_RST())
 	{
 		LL_LOG_E("LLOS_DS18B20_Init: ", "reset failed!\r\n");
-		return 2;
+		return LL_DS18B20_ERR_DETECT;
 	}
 	
 	if(ds18b20TaskId == LL_ERR_INVALID)
@@ -118,7 +118,7 @@ ll_err_t LLOS_DS18B20_Init(enum ll_DS18B20_CMD_Resolution_t resolution, uint16_t
 		if(ds18b20TaskId == LL_ERR_INVALID)
 		{
 			LL_LOG_E("LLOS_DS18B20_Init: ", "ds18b20TaskId == LL_ERR_INVALID\r\n");
-			return 3;
+			return LL_DS18B20_ERR_REGISTER;
 		}
 	}
 	
@@ -146,7 +146,7 @@ uint64_t LLOS_DS18B20_ReadROM(void)
 ll_newState_t LLOS_DS18B20_GetAlarm(void)
 {
     uint8_t var;
-	ll_newState_t flag = false;
+	ll_newState_t flag = ll_disable;
 	
 	busy = true;
     if(!LLOS_DS18B20_RST())
@@ -177,7 +177,7 @@ static void LLOS_DS18B20_GetData(void)
     }
 	else
 	{
-		ll_DS18B20_Data.err = 0x03;
+		ll_DS18B20_Data.err = LL_DS18B20_ERR_DETECT;
 		ll_DS18B20_Data.temperature = -99.9f;
 		LLOS_Start_Event(ds18b20TaskId, 0x01, LLOS_Ms_To_Tick(100));
 	}
@@ -225,9 +225,9 @@ static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 
 				if(crc != LLOS_CRC_CAL(&ll_crcModel_CRC8_MAXIM, array, sizeof(array)))
 				{
-					ll_DS18B20_Data.err = 0x01;
+					ll_DS18B20_Data.err = LL_DS18B20_ERR_CRC;
 					ll_DS18B20_Data.temperature = -99.9f;
-					return 0x01;
+					goto end;
 				}
 				
 				if(temp & 0x8000)
@@ -239,14 +239,15 @@ static ll_taskEvent_t Task_Events(ll_taskId_t taskId, ll_taskEvent_t events)
 					ll_DS18B20_Data.temperature = temp * 0.0625;
 				}
 				
-				ll_DS18B20_Data.err = 0x00;
+				ll_DS18B20_Data.err = LL_DS18B20_ERR_SUCCESS;
 			}
 			else
 			{
-				ll_DS18B20_Data.err = 0x02;
+				ll_DS18B20_Data.err = LL_DS18B20_ERR_DETECT;
 				ll_DS18B20_Data.temperature = -99.9f;
 			}
 		}
+end:
 		LLOS_Start_Event(ds18b20TaskId, 0x02, LLOS_Ms_To_Tick(ll_period));
 		
 		return 0x01;

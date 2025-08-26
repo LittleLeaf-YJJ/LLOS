@@ -11,9 +11,9 @@
 #endif
 
 /* ==========================[kernel]========================== */
-#define ll_cmd_printf(x...)	printf(x)	/* 指令解析输出映射 */
+#define ll_cmd_printf(x...)				printf(x)	/* 指令解析输出映射 */
 
-#define LL_LOG_LEVEL			(4)     	/* 打印日志等级 */
+#define LL_LOG_LEVEL					(4)     	/* 打印日志等级 */
 
 #if(LL_LOG_LEVEL > 3)
     #ifndef LL_LOG_D

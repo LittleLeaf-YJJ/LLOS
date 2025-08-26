@@ -5,12 +5,12 @@
 
 struct ll_eventCB_list_t
 {
-	ll_tick_t startTick[16];
-	bool oldActivation[16];
-	bool newActivation[16];
-	ll_taskEvent_t oldEvents;
-	ll_taskEvent_t newEvents;
-	ll_eventCB_t eventCB;
+	ll_tick_t startTick[16];		/* 任务的事件计时器 */
+	ll_taskEvent_t oldActivation;	/* 任务的事件历史激活标志 */
+	ll_taskEvent_t newActivation;	/* 任务的事件当前激活标志 */
+	ll_taskEvent_t oldEvents;		/* 任务的历史事件 */
+	ll_taskEvent_t newEvents;		/* 任务的当前事件 */
+	ll_eventCB_t eventCB;			/* 任务的回调函数 */
 };
 struct ll_timerCB_list_t
 {
@@ -32,7 +32,7 @@ struct ll_rtc_t
 };
 
 static volatile ll_tick_t sysTick;
-static volatile uint8_t tickMultiple = 1;
+static volatile uint8_t tickMultiple = 1;	/* 防止除0发生 */
 static ll_taskId_t taskIndex;	/* 0xFF保留不可用 */
 static ll_deviceId_t deviceIndex;
 static struct ll_rtc_t rtc;
@@ -150,33 +150,28 @@ ll_taskId_t LLOS_Register_Events(ll_eventCB_t ll_eventCB)
 void LLOS_Loop(void)
 {
 	int8_t i, j;
-	for(i = 0; i < taskIndex; i++) /* 任务轮询 */
+	for(i = 0; i < taskIndex; i++)
 	{
-		for(j = 15; j >= 0; j--) /* 事件轮询，从0x8000开始保证消息事件的优先级最高  */
+		/* 更新事件状态 */
+		eventCB_list[i].oldEvents |= eventCB_list[i].newEvents;
+		eventCB_list[i].newEvents = 0;
+		eventCB_list[i].oldActivation |= eventCB_list[i].newActivation;
+		eventCB_list[i].newActivation = 0;
+		if(eventCB_list[i].eventCB == NULL)continue;
+		
+		for(j = 15; j >= 0; j--) /* 从0x8000开始保证消息事件的优先级最高  */
 		{
-			/* 更新事件状态 */
-			eventCB_list[i].oldEvents |= eventCB_list[i].newEvents;
-			if(eventCB_list[i].newActivation[j])
-			{
-				eventCB_list[i].oldActivation[j] = eventCB_list[i].newActivation[j];
-			}
-			eventCB_list[i].newEvents = 0;
-			eventCB_list[i].newActivation[j] = 0;
-
 			/* 如果事件已激活&&系统节拍大于该事件的启动节拍则执行该事件 */
-			if(
-					eventCB_list[i].oldActivation[j] &&
-					(sysTick >= eventCB_list[i].startTick[j]) &&
-					eventCB_list[i].eventCB != NULL)
+			if(eventCB_list[i].oldActivation & LL_EVENT(j) && sysTick >= eventCB_list[i].startTick[j])
 			{
 				/* 启动对应的事件并且清除返回的事件 */
-				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & (0x0001 << j), ll_disable);
-				eventCB_list[i].oldEvents ^= eventCB_list[i].eventCB(i, eventCB_list[i].oldEvents & (0x0001 << j));
-				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & (0x0001 << j), ll_enable);
+				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & LL_EVENT(j), ll_disable);
+				eventCB_list[i].oldEvents ^= eventCB_list[i].eventCB(i, eventCB_list[i].oldEvents & LL_EVENT(j));
+				if(ll_LP_CB != NULL)ll_LP_CB(i, eventCB_list[i].oldEvents & LL_EVENT(j), ll_enable);
 				/* 如果事件标志已被清除则取消激活该事件 */
-				if((eventCB_list[i].oldEvents & (0x0001 << j)) == 0x0000)
+				if((eventCB_list[i].oldEvents & LL_EVENT(j)) == 0x0000)
 				{
-					eventCB_list[i].oldActivation[j] = false;
+					eventCB_list[i].oldActivation &= ~LL_EVENT(j);
 				}
 			}
 		}
@@ -196,11 +191,8 @@ void LLOS_Start_Event(ll_taskId_t taskId, ll_taskEvent_t events, ll_tick_t tick)
 	eventCB_list[taskId].newEvents |= events; /* 将要启动的事件添加到新事件列表 */
 	for(i = 0; i < 16; i++)
 	{
-		if((events >> i) & 0x0001) /* 操作对应事件 */
-		{
-			eventCB_list[taskId].startTick[i] = sysTick + tick; /* 为新事件设定启动时间 */
-			eventCB_list[taskId].newActivation[i] = true; /* 激活新事件 */
-		}
+		eventCB_list[taskId].startTick[i] = sysTick + tick; /* 为新事件设定启动时间 */
+		eventCB_list[taskId].newActivation |= events; /* 激活新事件 */
 	}
 }
 void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
@@ -213,14 +205,8 @@ void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
 		return;
 	}
 	
-	for(i = 0; i < 16; i++)
-	{
-		if((events >> i) & 0x0001) /* 操作对应事件 */
-		{
-			eventCB_list[taskId].oldActivation[i] = false; /* 取消激活待执行事件 */
-			eventCB_list[taskId].newActivation[i] = false; /* 取消激活新事件 */
-		}
-	}
+	eventCB_list[taskId].oldActivation &= ~events; /* 取消激活待执行事件 */
+	eventCB_list[taskId].newActivation &= ~events; /* 取消激活新事件 */
 }
 
 uint8_t LLOS_Get_TaskNum(void)
@@ -1095,7 +1081,8 @@ ll_err_t LLOS_Cmd_ParamCopyText(ll_cmd_t *context, char *text, uint32_t copy_len
 
 void LLOS_Cmd_ResultBool(bool val)
 {
-	ll_cmd_printf("%d\r\n", val);
+	if(val)ll_cmd_printf("true\r\n");
+	else ll_cmd_printf("false\r\n");
 }
 void LLOS_Cmd_ResultFloat(float val)
 {

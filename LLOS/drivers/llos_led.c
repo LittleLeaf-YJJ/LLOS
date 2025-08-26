@@ -16,7 +16,7 @@ void LLOS_LED_Init(uint8_t timerN, uint16_t ms, struct ll_led_config_t *led_conf
 	
 	if(ms <= 0 || ledNum <= 0 || led_config == NULL)
 	{
-		LL_LOG_E("LLOS_LED_Init ", "para NULL!\r\n");
+		LL_LOG_E("LLOS_LED_Init ", "para error!\r\n");
 		while(1);
 	}
 	

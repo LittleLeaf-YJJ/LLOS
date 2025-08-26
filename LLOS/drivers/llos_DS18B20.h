@@ -1,8 +1,8 @@
 /*
  * DS18B20驱动
  * @author LittleLeaf All rights reserved
- * @version V2.0.1
- * @date 2025/05/16
+ * @version V2.1.0
+ * @date 2025/08/01
  */
 #ifndef __LLOS_DS18B20_H
 #define __LLOS_DS18B20_H
@@ -15,9 +15,9 @@
 
 #define LL_DS18B20_ERR_SUCCESS		(0x00)
 #define LL_DS18B20_ERR_CRC			(0x01)
-#define LL_DS18B20_ERR_LOOP			(0x02)
-#define LL_DS18B20_ERR_GETFAILED	(0x03)
-#define LL_DS18B20_ERR_NREADY		(0xFF)
+#define LL_DS18B20_ERR_DETECT		(0x02)
+#define LL_DS18B20_ERR_HW			(0x03)
+#define LL_DS18B20_ERR_REGISTER		(0x04)
 
 enum ll_DS18B20_CMD_t
 {

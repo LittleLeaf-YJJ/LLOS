@@ -5,8 +5,8 @@
  * 响调度精度，所以建议尽可能地使用状态机对阻塞任务进行拆分。RTC闹钟和软件定时器的回调
  * 函数里不能有阻塞。
  * @author LittleLeaf All rights reserved
- * @version V2.1.0
- * @date 2025/06/17
+ * @version V2.1.2
+ * @date 2025/08/25
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -31,7 +31,7 @@
  extern "C" {
 #endif
 
-#define LLOS_VERSION		"V2.1.0"
+#define LLOS_VERSION		"V2.1.2"
 
 #define LL_EVENT_ALL		(0xFFFF)
 #define LL_EVENT_MSG		(0x8000)
@@ -56,9 +56,11 @@
           | (((uint32_t)(b1) & 0x00FF) << 8) \
           | (((uint32_t)(b2) & 0x00FF) << 16) \
           | (((uint32_t)(b3) & 0x00FF) << 24)))
+		  
 #define LL_BIT_SET(REG, BIT)			REG) |= (BIT))
 #define LL_BIT_CLEAR(REG, BIT)			((REG) &= ~(BIT))
 #define LL_BIT_READ(REG, BIT)			((REG) & (BIT))
+
 #define LL_LIMIT_MAX(variable, max)		do{if(variable > max)variable = max;}while(0)
 #define LL_LIMIT_MIN(variable, min)		do{if(variable < min)variable = min;}while(0)
 #define LL_LIMIT(variable, max, min)	do{if(variable > max)variable = max;else if(variable < min)variable = min;}while(0)
@@ -68,7 +70,7 @@
 #endif
 
 #ifndef UNUSED_VARIABLE
-#define UNUSED_VARIABLE(X)  ((void)(X))
+#define UNUSED_VARIABLE(x)  ((void)(x))
 #endif
 
 #define __LL_ALIGNED(n)		__attribute__((aligned(n)))

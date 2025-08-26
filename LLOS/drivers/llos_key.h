@@ -54,7 +54,7 @@ extern struct ll_keyWhich_t *ll_keyWhich;
 /**
  * @brief 初始化
  * @param[in] timerN: 使用的OS定时器ID
- * @param[in] ms: 毫秒，按键的轮询周期，一般为20
+ * @param[in] ms: 毫秒，按键的轮询周期，推荐20ms左右
  * @param[in] overTime: 检测时间阈值，推荐100ms左右
  * @param[in] longPressTime: 长按检测时间阈值，推荐800ms左右
  * @param[in] keyConfig: 按键IO配置
