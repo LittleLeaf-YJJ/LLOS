@@ -6,8 +6,6 @@
 struct ll_eventCB_list_t
 {
 	ll_tick_t startTick[16];		/* 任务的事件计时器 */
-	ll_taskEvent_t oldActivation;	/* 任务的事件历史激活标志 */
-	ll_taskEvent_t newActivation;	/* 任务的事件当前激活标志 */
 	ll_taskEvent_t oldEvents;		/* 任务的历史事件 */
 	ll_taskEvent_t newEvents;		/* 任务的当前事件 */
 	ll_eventCB_t eventCB;			/* 任务的回调函数 */
@@ -22,7 +20,7 @@ struct ll_timerCB_list_t
 };
 struct ll_alarm_list_t
 {
-	uint32_t Sec;
+	uint32_t sec;
 	ll_alarmCB_t CB;
 };
 struct ll_rtc_t
@@ -150,29 +148,27 @@ ll_taskId_t LLOS_Register_Events(ll_eventCB_t ll_eventCB)
 void LLOS_Loop(void)
 {
 	int8_t i, j;
+	uint16_t event;
+	
 	for(i = 0; i < taskIndex; i++)
 	{
+		if(eventCB_list[i].eventCB == NULL)continue;
+		
 		/* 更新事件状态 */
 		LL_BIT_SET(eventCB_list[i].oldEvents, eventCB_list[i].newEvents);
 		eventCB_list[i].newEvents = 0;
-		LL_BIT_SET(eventCB_list[i].oldActivation, eventCB_list[i].newActivation);
-		eventCB_list[i].newActivation = 0;
-		if(eventCB_list[i].eventCB == NULL)continue;
 		
 		for(j = 15; j >= 0; j--) /* 从0x8000开始保证消息事件的优先级最高  */
 		{
-			/* 如果事件已激活&&系统节拍大于该事件的启动节拍则执行该事件 */
-			if(LL_BIT_READ(eventCB_list[i].oldActivation, LL_EVENT(j)) && sysTick >= eventCB_list[i].startTick[j])
+			event = LL_BIT_READ(eventCB_list[i].oldEvents, LL_EVENT(j));
+			
+			/* 如果事件已激活&&系统节拍大于该事件的启动节拍则执行该事件 */	
+			if(event && sysTick >= eventCB_list[i].startTick[j])
 			{
-				uint16_t event = LL_BIT_READ(eventCB_list[i].oldEvents, LL_EVENT(j));
-				
 				/* 启动对应的事件并且清除返回的事件 */
 				if(ll_LP_CB != NULL)ll_LP_CB(i, event, ll_disable);
-				eventCB_list[i].oldEvents ^= eventCB_list[i].eventCB(i, event);
+				eventCB_list[i].oldEvents &= ~eventCB_list[i].eventCB(i, event);
 				if(ll_LP_CB != NULL)ll_LP_CB(i, event, ll_enable);
-				/* 如果事件标志已被清除则取消激活该事件 */
-				if((eventCB_list[i].oldEvents & LL_EVENT(j)) == 0x0000)
-					LL_BIT_CLEAR(eventCB_list[i].oldActivation, LL_EVENT(j));
 			}
 		}
 	}
@@ -189,10 +185,11 @@ void LLOS_Start_Event(ll_taskId_t taskId, ll_taskEvent_t events, ll_tick_t tick)
 	}
 	
 	eventCB_list[taskId].newEvents |= events; /* 将要启动的事件添加到新事件列表 */
+	
 	for(i = 0; i < 16; i++)
 	{
-		eventCB_list[taskId].startTick[i] = sysTick + tick; /* 为新事件设定启动时间 */
-		eventCB_list[taskId].newActivation |= events; /* 激活新事件 */
+		if((events >> i) & 0x0001) /* 操作对应事件 */
+			eventCB_list[taskId].startTick[i] = sysTick + tick; /* 为新事件设定启动时间 */
 	}
 }
 void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
@@ -205,8 +202,7 @@ void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
 		return;
 	}
 	
-	eventCB_list[taskId].oldActivation &= ~events; /* 取消激活待执行事件 */
-	eventCB_list[taskId].newActivation &= ~events; /* 取消激活新事件 */
+	eventCB_list[taskId].newEvents &= ~events; /* 取消激活事件 */
 }
 
 uint8_t LLOS_Get_TaskNum(void)
@@ -236,7 +232,7 @@ void LLOS_Tick_Increase(uint8_t ms)
 
 		for(i = 0; i < ll_memCfgs.alarmNum; i++)
 		{
-			if(rtc.sec >= alarm_list[i].Sec && alarm_list[i].CB != NULL)
+			if(rtc.sec >= alarm_list[i].sec && alarm_list[i].CB != NULL)
 			{
 				alarm_list[i].CB(i);
 				alarm_list[i].CB = NULL;
@@ -450,7 +446,7 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 	toSec += hour * 3600;
 	toSec += min * 60;
 	toSec += sec;
-	alarm_list[alarmN].Sec = toSec;
+	alarm_list[alarmN].sec = toSec;
 	alarm_list[alarmN].CB = alarmCB;
 	
 	return LL_ERR_SUCCESS;

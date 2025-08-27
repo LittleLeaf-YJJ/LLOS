@@ -5,8 +5,8 @@
  * 响调度精度，所以建议尽可能地使用状态机对阻塞任务进行拆分。RTC闹钟和软件定时器的回调
  * 函数里不能有阻塞。
  * @author LittleLeaf All rights reserved
- * @version V2.1.2
- * @date 2025/08/25
+ * @version V2.1.3
+ * @date 2025/08/27
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -31,11 +31,11 @@
  extern "C" {
 #endif
 
-#define LLOS_VERSION		"V2.1.2"
+#define LLOS_VERSION		"V2.1.3"
 
 #define LL_EVENT_ALL		(0xFFFF)
 #define LL_EVENT_MSG		(0x8000)
-#define LL_EVENT(n)			(0x0001 << n)
+#define LL_EVENT(n)			(1U << (n))
 
 #define LL_ERR_SUCCESS		(0x00)
 #define LL_ERR_FAILED		(0x01)
@@ -45,7 +45,7 @@
 #define LL_ERR_PARA			(0x05)
 #define LL_ERR_INVALID		(0xFF)
 
-#define LL_BV(n)      		(1 << (n))
+#define LL_BV(n)      		(1U << (n))
 #define LL_BF(x, b, s)  	(((x) & (b)) >> (s))
 #define LL_ABS(n)			(((n) < 0) ? -(n) : (n))
 #define LL_MIN(a, b)		(((a) < (b)) ? (a) : (b))

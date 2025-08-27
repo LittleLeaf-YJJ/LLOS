@@ -18,7 +18,7 @@
  extern "C" {
 #endif
 
-#define LL_LEDn(n)			LL_BV(n)
+#define LL_LEDn(n)			(1U << (n))
 
 struct ledBlink_t
 {
