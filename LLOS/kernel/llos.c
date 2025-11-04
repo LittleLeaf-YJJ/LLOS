@@ -646,6 +646,15 @@ ll_device_t *LLOS_Device_Find(const char *name)
 	return NULL;
 }
 
+void LLOS_Device_EnumAll(void)
+{
+	for(ll_deviceId_t i = 0; i < ll_memCfgs.deviceNum; i++)
+	{
+		if(device_list[i].name)
+			LL_LOG_I("Device: %u -> %s\r\n", i, device_list[i].name);
+	}
+}
+
 ll_err_t LLOS_Device_Init(ll_device_t *dev, void *arg)
 {
 	if(dev == NULL || dev->initCB == NULL)

@@ -4,9 +4,9 @@
  * 通信、软定时器、RTC、动态内存管理、设备驱动框架和指令解析功能。要注意的是，阻塞会影
  * 响调度精度，所以建议尽可能地使用状态机对阻塞任务进行拆分。RTC闹钟和软件定时器的回调
  * 函数里不能有阻塞。
- * @author LittleLeaf All rights reserved
- * @version V2.1.3
- * @date 2025/08/27
+ * @author 		LittleLeaf All rights reserved
+ * @version 	V2.1.4
+ * @date 		2025/11/04
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -31,7 +31,7 @@
  extern "C" {
 #endif
 
-#define LLOS_VERSION		"V2.1.3"
+#define LLOS_VERSION		"V2.1.4"
 
 #define LL_EVENT_ALL		(0xFFFF)
 #define LL_EVENT_MSG		(0x8000)
@@ -366,6 +366,11 @@ uint8_t LLOS_Device_GetNum(void);
  * @return 设备句柄
  */
 ll_device_t *LLOS_Device_Find(const char *name);
+
+/**
+ * @brief 枚举所有设备名
+ */
+void LLOS_Device_EnumAll(void);
 
 /**
  * @brief 初始化设备

@@ -47,7 +47,7 @@
 
 #if(LL_LOG_LEVEL > 0)
     #ifndef LL_LOG_I
-    #define LL_LOG_I(x...)			printf(x)
+    #define LL_LOG_I(x...)			    printf(x)
     #endif
 #else
     #ifndef LL_LOG_I
