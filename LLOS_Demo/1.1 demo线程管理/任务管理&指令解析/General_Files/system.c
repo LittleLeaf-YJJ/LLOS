@@ -65,7 +65,7 @@ void System_Init(void)
 	cfgs.poolSize = sizeof(pMemPool);
 	LLOS_Init(&CBs, &cfgs);
 	LLOS_Cmd_Init(255, "LittleLeaf", "LLOS", LLOS_VERSION, "00000001");
-	
+
 	/* Task初始化 */
 	taskUART = LLOS_Register_Events(TaskUART_Events);
     if(taskUART == LL_ERR_INVALID)

@@ -16,6 +16,10 @@
 #define MASK_KEY_3 				LL_BV(19)
 #define MASK_KEY 				(uint32_t)(MASK_KEY_1 | MASK_KEY_2 | MASK_KEY_3)
 
+#define LEDR                    0
+#define LEDG                    1
+#define LEDB                    2
+
 /* ========================[变量声明]========================= */
 /* 串口缓冲区 */
 #define UART_BUFFER_LEN		(255)
@@ -70,23 +74,23 @@ void System_Init(void)
 	
 	struct ll_led_config_t led_config[4] = {0};
 	
-	led_config[0].port = PORT_LED;
-	led_config[0].pinMask = PIN_LEDR;
-	led_config[0].isActiveHigh = false;
+	led_config[LEDR].port = PORT_LED;
+	led_config[LEDR].pinMask = PIN_LEDR;
+	led_config[LEDR].isActiveHigh = false;
 	
-	led_config[1].port = PORT_LED;
-	led_config[1].pinMask = PIN_LEDG;
-	led_config[1].isActiveHigh = false;
+	led_config[LEDG].port = PORT_LED;
+	led_config[LEDG].pinMask = PIN_LEDG;
+	led_config[LEDG].isActiveHigh = false;
 	
-	led_config[2].port = PORT_LED;
-	led_config[2].pinMask = PIN_LEDB;
-	led_config[2].isActiveHigh = false;
+	led_config[LEDB].port = PORT_LED;
+	led_config[LEDB].pinMask = PIN_LEDB;
+	led_config[LEDB].isActiveHigh = false;
 	
 	LLOS_LED_Init(0, 10, led_config, 3);
 	
-	LLOS_LED_Blink(0, 10, 10, 500);
-	LLOS_LED_Blink(1, 255, 15, 100);
-	LLOS_LED_Set(2, ll_led_on);
+	LLOS_LED_Blink(LEDR, 10, 10, 500);
+	LLOS_LED_Blink(LEDG, 255, 15, 100);
+	LLOS_LED_Set(LEDB, ll_led_on);
 	
 	/* LLOS KEY模块初始化 */
 	GPIOB_ModeCfg(MASK_KEY, GPIO_ModeIN_PU);
