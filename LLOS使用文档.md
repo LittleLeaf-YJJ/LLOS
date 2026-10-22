@@ -91,7 +91,8 @@ void LLOS_Loop(void);
 在 `while(1)` 中持续调用：
 
 ```c
-while(1) {
+while(1)
+{
     LLOS_Loop();
 }
 ```
