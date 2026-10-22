@@ -1,8 +1,8 @@
 /*
  * 环形fifo
  * @author LittleLeaf All rights reserved
- * @version V1.0.1
- * @date 2026/06/05
+ * @version V1.0.2
+ * @date 2026/10/11
  */
 #ifndef LLOS_FIFO_H
 #define LLOS_FIFO_H
@@ -20,6 +20,7 @@ typedef struct
     uint32_t pEnd;
     uint32_t size;
     uint8_t *pBuffer;
+    bool ready;
 } llos_fifo_t;
 
 /**

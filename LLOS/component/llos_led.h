@@ -2,8 +2,8 @@
  * LED(GPIO输出)驱动，支持无阻塞的LED开关，特定闪烁次数、占空比和时长的LED控制，
  * 默认低电平有效。
  * @author LittleLeaf All rights reserved
- * @version V3.0.0
- * @date 2026/06/10
+ * @version V3.0.1
+ * @date 2026/10/11
  * 基础使用步骤:
  * 1) 初始化调用LLOS_LED_Init
  * 2) 使用相关API控制LED
@@ -23,17 +23,14 @@ extern "C"
 
 #if LL_LED_USE_LLOS
 #define LL_LED_MALLOC 				LLOS_malloc
+#define LL_LED_FREE					LLOS_free
 #define ENTER_CRITICAL()			LLOS_Critical(1)
 #define EXIT_CRITICAL()				LLOS_Critical(0)
 #else
-#ifndef ENTER_CRITICAL()
-    #error "ENTER_CRITICAL not defined! Please define it (e.g., __disable_irq()) before including this header!"
-#endif
-#ifndef EXIT_CRITICAL()
-    #error "EXIT_CRITICAL not defined! Please define it (e.g., __enable_irq()) before including this header!"
-#endif
-
 #define LL_LED_MALLOC           	malloc
+#define LL_LED_FREE					free
+#define ENTER_CRITICAL()			do { } while (0)
+#define EXIT_CRITICAL()				do { } while (0)
 #endif
 
 struct ledBlink_t
@@ -46,9 +43,9 @@ struct ledBlink_t
 
 struct ll_led_config_t
 {
-	ll_IO_t port;	   /* GPIO控制整组复位置位的寄存器地址 */
-	uint32_t pinMask;  /* 所在的GPIO引脚 */
-	bool isActiveHigh; /* 是否为高电平有效 */
+	uintptr_t port; 	/* GPIO控制整组复位置位的寄存器地址 */
+	uint32_t pinMask;  	/* 所在的GPIO引脚 */
+	bool isActiveHigh; 	/* 是否为高电平有效 */
 
 	struct ledBlink_t ledBlink;
 };

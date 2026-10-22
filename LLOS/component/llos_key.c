@@ -35,55 +35,90 @@ void LLOS_Key_Tick(uint8_t timerN);
 void LLOS_Key_Init(uint8_t timerN, uint16_t ms, uint16_t overTime, uint16_t longPressTime, struct ll_keyConfig_t *cfg, uint8_t portNum, ll_keyCB_t keyCB)
 {
 	uint32_t size;
+	struct ll_keyWhich_t *oldWhich;
+	struct ll_keyConfig_t *oldConfig;
+	struct FSM_value_t *oldFSM;
+	struct ll_keyWhich_t *newWhich;
+	struct ll_keyConfig_t *newConfig;
+	struct FSM_value_t *newFSM;
 
-	keyTaskPeriod = ms;
-	keyChangeCB = keyCB;
-
-	if (portNum == 0 || overTime == 0 || longPressTime == 0 || cfg == NULL)
+	if (ms == 0 || portNum == 0 || overTime == 0 || longPressTime == 0 || cfg == NULL)
 	{
-		LL_LOG_E("%s ", "para error!\r\n", __FUNCTION__);
-		while (1);
+		LL_LOG_E("%s ", "parameter error!\r\n", __FUNCTION__);
+		return;
 	}
+	ENTER_CRITICAL();
+	ready = false;
+	oldFSM = FSM_value; FSM_value = NULL;
+	oldConfig = ll_keyConfig; ll_keyConfig = NULL;
+	oldWhich = ll_keyWhich; ll_keyWhich = NULL;
+	EXIT_CRITICAL();
+	if (oldFSM != NULL) LL_KEY_FREE(oldFSM);
+	if (oldConfig != NULL) LL_KEY_FREE(oldConfig);
+	if (oldWhich != NULL) LL_KEY_FREE(oldWhich);
 
+	size = sizeof(struct ll_keyWhich_t) * portNum;
+	newWhich = LL_KEY_MALLOC(size);
+	if (newWhich == NULL)
+	{
+		LL_LOG_E("%s ", "keyWhich malloc failed!\r\n", __FUNCTION__);
+		ready = false;
+		return;
+	}
+	memset(newWhich, 0, size);
+
+	size = sizeof(struct ll_keyConfig_t) * portNum;
+	newConfig = LL_KEY_MALLOC(size);
+	if (newConfig == NULL)
+	{
+		LL_LOG_E("%s ", "keyConfig malloc failed!\r\n", __FUNCTION__);
+		LL_KEY_FREE(newWhich);
+		ready = false;
+		return;
+	}
+	memcpy(newConfig, cfg, size);
+
+	size = sizeof(struct FSM_value_t) * portNum;
+	newFSM = LL_KEY_MALLOC(size);
+	if (newFSM == NULL)
+	{
+		LL_LOG_E("%s ", "FSM_value malloc null!\r\n", __FUNCTION__);
+		LL_KEY_FREE(newConfig);
+		LL_KEY_FREE(newWhich);
+		ready = false;
+		return;
+	}
+	memset(newFSM, 0, size);
+
+#if LL_KEY_USE_LLOS
+	if (LLOS_Timer_Set(timerN, ll_enable, true, LLOS_Ms_To_Tick(ms), LLOS_Key_Tick) != LL_ERR_SUCCESS)
+	{
+		LL_KEY_FREE(newFSM);
+		LL_KEY_FREE(newConfig);
+		LL_KEY_FREE(newWhich);
+		ready = false;
+		LL_LOG_E("%s ", "timer setup failed!\r\n", __FUNCTION__);
+		return;
+	}
+#endif
+
+	ENTER_CRITICAL();
 	ll_portNum = portNum;
 	ll_overTime = overTime;
 	ll_longPressTime = longPressTime;
-
-	size = sizeof(struct ll_keyWhich_t) * ll_portNum;
-	ll_keyWhich = LL_KEY_MALLOC(size);
-	if (ll_keyWhich == NULL)
-	{
-		LL_LOG_E("%s ", "keyWhich malloc failed!\r\n", __FUNCTION__);
-		while (1);
-	}
-
-	size = sizeof(struct ll_keyConfig_t) * ll_portNum;
-	ll_keyConfig = LL_KEY_MALLOC(size);
-	if (ll_keyConfig == NULL)
-	{
-		LL_LOG_E("%s ", "keyConfig malloc failed!\r\n", __FUNCTION__);
-		while (1);
-	}
-	memcpy(ll_keyConfig, cfg, size);
-
-	size = sizeof(struct FSM_value_t) * ll_portNum;
-	FSM_value = LL_KEY_MALLOC(size);
-	if (FSM_value == NULL)
-	{
-		LL_LOG_E("%s ", "FSM_value malloc null!\r\n", __FUNCTION__);
-		while (1);
-	}
-	memset(FSM_value, 0, size);
-
-#if LL_KEY_USE_LLOS
-	LLOS_Timer_Set(timerN, ll_enable, true, LLOS_Ms_To_Tick(keyTaskPeriod), LLOS_Key_Tick);
-#endif
-
+	keyTaskPeriod = ms;
+	keyChangeCB = keyCB;
+	ll_keyWhich = newWhich;
+	ll_keyConfig = newConfig;
+	FSM_value = newFSM;
 	ready = true;
+	EXIT_CRITICAL();
 }
 
 void LLOS_Key_Tick(uint8_t timerN)
 {
+	LL_UNUSED(timerN);
+
 	uint8_t i;
 
 	if(!ready)
@@ -96,11 +131,19 @@ void LLOS_Key_Tick(uint8_t timerN)
 	{
 		bool need_callback = false;
 		bool callback_isUp = false;
-
-		if (ll_keyConfig[i].port == 0 || ll_keyConfig[i].pinMask == 0)
-			continue;
+		ll_keyCB_t callback = NULL;
 
 		ENTER_CRITICAL();
+		if (!ready || ll_keyConfig == NULL || ll_keyWhich == NULL || FSM_value == NULL || i >= ll_portNum)
+		{
+			EXIT_CRITICAL();
+			break;
+		}
+		if (ll_keyConfig[i].port == 0 || ll_keyConfig[i].pinMask == 0)
+		{
+			EXIT_CRITICAL();
+			continue;
+		}
 
 		switch (FSM_value[i].state)
 		{
@@ -162,12 +205,16 @@ void LLOS_Key_Tick(uint8_t timerN)
 				break;
 			}
 		}
+		if (need_callback)
+		{
+			callback = keyChangeCB;
+		}
 
 		EXIT_CRITICAL();
 
-		if (need_callback && keyChangeCB != NULL)
+		if (need_callback && callback != NULL)
 		{
-			keyChangeCB(i, callback_isUp, &ll_keyWhich[i]);
+			callback(i, callback_isUp, &ll_keyWhich[i]); // # 恢复传递持久按键信息，避免栈临时副本导致事件字段失真
 			need_callback = false;
 		}
 	}

@@ -24,7 +24,7 @@ struct ll_crc_confStruct_t ll_crcModel_CRC16_CCITT_FALSE = {.initVal = 0xFFFF, .
 struct ll_crc_confStruct_t ll_crcModel_CRC16_X25 = {.initVal = 0xFFFF, .finalXOR = 0xFFFF, .poly = 0x1021, .width = 16, .isReverseInput = true, .isReverseOutput = true};
 struct ll_crc_confStruct_t ll_crcModel_CRC16_XMODEM = {.initVal = 0x0000, .finalXOR = 0x0000, .poly = 0x1021, .width = 16, .isReverseInput = false, .isReverseOutput = false};
 struct ll_crc_confStruct_t ll_crcModel_CRC16_DNP = {.initVal = 0x0000, .finalXOR = 0xFFFF, .poly = 0x3D65, .width = 16, .isReverseInput = true, .isReverseOutput = true};
-struct ll_crc_confStruct_t ll_crcModel_CRC32 = {.initVal = 0xFFFFFFFF, .finalXOR = 0xFFFFFFFF, .poly = 0x04C11DB7, .width = 32, .isReverseInput = true, .isReverseOutput = true}; // #
+struct ll_crc_confStruct_t ll_crcModel_CRC32 = {.initVal = 0xFFFFFFFF, .finalXOR = 0xFFFFFFFF, .poly = 0x04C11DB7, .width = 32, .isReverseInput = true, .isReverseOutput = true};
 struct ll_crc_confStruct_t ll_crcModel_CRC32_MPEG_2 = {.initVal = 0xFFFFFFFF, .finalXOR = 0x00000000, .poly = 0x04C11DB7, .width = 32, .isReverseInput = false, .isReverseOutput = false};
 #endif
 
@@ -76,6 +76,8 @@ uint32_t LLOS_CRC_CAL(struct ll_crc_confStruct_t *crc_confStruct, uint8_t *pData
 
 	if (crc_confStruct == NULL)
 		return 0xFFFFFFFF;
+	if (pData == NULL && len != 0)
+		return 0xFFFFFFFF;
 	if (crc_confStruct->width != 4 && crc_confStruct->width != 5 && crc_confStruct->width != 6 && crc_confStruct->width != 7 && crc_confStruct->width != 8 && crc_confStruct->width != 16 && crc_confStruct->width != 32)
 		return 0xFFFFFFFF;
 
@@ -107,11 +109,11 @@ static uint32_t LLOS_CRC16_32_CAL(struct ll_crc_confStruct_t *crc_confStruct, ui
 
 	for (uint32_t i = 0; i < len; i++)
 	{
-		crc ^= (pData[i] << (crc_confStruct->width - 8)); /* 将数据的字节对齐到CRC宽度# */
+		crc ^= ((uint32_t)pData[i] << (crc_confStruct->width - 8)); /* 将数据的字节对齐到CRC宽度 */
 
 		for (uint8_t j = 0; j < 8; j++)
 		{
-			if (crc & (1 << (crc_confStruct->width - 1))) /* 检查CRC的最高位 */
+			if (crc & ((uint32_t)1U << (crc_confStruct->width - 1))) /* 检查CRC的最高位 */
 				crc = (crc << 1) ^ crc_confStruct->poly;  /* 使用配置的多项式进行异或 */
 			else
 				crc <<= 1;

@@ -4,7 +4,8 @@
  * 解析功能。要注意的是，阻塞会影响调度精度，所以建议尽可能地使用状态机和协程对阻塞任务进行拆分。
  * RTC闹钟和软件定时器的回调函数里不能有阻塞。
  * @author 		LittleLeaf All rights reserved
- * @date 		2026/06/09
+ * @version 	V3.1.0
+ * @date 		2026/10/11
  * 移植步骤:
  * 1) 初始化调用LLOS_Init;
  * 2) while(1)调用LLOS_Loop;
@@ -30,7 +31,7 @@ extern "C"
 {
 #endif
 
-#define LLOS_VERSION 			"V3.0.0"
+#define LLOS_VERSION 			"V3.1.0"
 
 #define LL_EVENT_ALL 			(0xFFFFFFFF)
 #define LL_EVENT(n) 			(1UL << (n))

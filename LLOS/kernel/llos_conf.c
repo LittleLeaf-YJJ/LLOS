@@ -1,5 +1,5 @@
 /*
- * 作者: LittleLeaf All rights reserved
+ * @author LittleLeaf All rights reserved
  */
 #include "llos.h"
 
@@ -32,7 +32,7 @@ ll_err_t LLOS_Cmd_Test(ll_cmd_t *context)
 ll_err_t LLOS_Cmd_Factory(ll_cmd_t *context)
 {
 	// user code
-
+	LL_UNUSED(context);
 	return LL_ERR_SUCCESS;
 }
 

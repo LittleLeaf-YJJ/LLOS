@@ -3,10 +3,9 @@
  */
 #include "llos_fifo.h"
 
-static bool ready;
-
 ll_err_t LLOS_FIFO_Init(llos_fifo_t *fifo, uint8_t *buffer, uint32_t size)
 {
+	if (fifo == NULL) return LL_ERR_NULL;
 	if (size == 0 || (size & (4 - 1)) != 0 || ((size) & (size - 1)) != 0)
 	{
 		LL_LOG_E("%s ", "size format error!\r\n", __FUNCTION__);
@@ -22,9 +21,8 @@ ll_err_t LLOS_FIFO_Init(llos_fifo_t *fifo, uint8_t *buffer, uint32_t size)
 	fifo->pEnd = 0;
 	fifo->pBuffer = buffer;
 	fifo->size = size;
+	fifo->ready = true;
 	memset(buffer, 0, size);
-
-	ready = true;
 
 	return LL_ERR_SUCCESS;
 }
@@ -36,7 +34,7 @@ void LLOS_FIFO_Clear(llos_fifo_t *fifo)
 		LL_LOG_E("%s ", "parameter error!\r\n", __FUNCTION__);
 		return;
 	}
-	if(!ready)
+	if(!fifo->ready)
 	{
 		LL_LOG_E("%s ", "not initialized!\r\n", __FUNCTION__);
 		return;
@@ -53,7 +51,7 @@ uint32_t LLOS_FIFO_Get_UsedSize(llos_fifo_t *fifo)
 		LL_LOG_E("%s ", "parameter error!\r\n", __FUNCTION__);
 		return 0xFFFFFFFF;
 	}
-	if(!ready)
+	if(!fifo->ready)
 	{
 		LL_LOG_E("%s ", "not initialized!\r\n", __FUNCTION__);
 		return 0xFFFFFFFF;
@@ -68,12 +66,13 @@ uint32_t LLOS_FIFO_Get_AvailableSize(llos_fifo_t *fifo)
 		LL_LOG_E("%s ", "parameter error!\r\n", __FUNCTION__);
 		return 0xFFFFFFFF;
 	}
-	if(!ready)
+	if(!fifo->ready)
 	{
 		LL_LOG_E("%s ", "not initialized!\r\n", __FUNCTION__);
 		return 0xFFFFFFFF;
 	}
-	return fifo->size - LLOS_FIFO_Get_UsedSize(fifo);
+	uint32_t used = LLOS_FIFO_Get_UsedSize(fifo);
+	return used > fifo->size ? 0 : fifo->size - used;
 }
 
 uint32_t LLOS_FIFO_Input(llos_fifo_t *fifo, const uint8_t *pData, uint32_t len)
@@ -83,7 +82,7 @@ uint32_t LLOS_FIFO_Input(llos_fifo_t *fifo, const uint8_t *pData, uint32_t len)
 		LL_LOG_E("%s ", "parameter error!\r\n", __FUNCTION__);
 		return 0;
 	}
-	if(!ready)
+	if(!fifo->ready)
 	{
 		LL_LOG_E("%s ", "not initialized!\r\n", __FUNCTION__);
 		return 0;
@@ -109,7 +108,7 @@ uint32_t LLOS_FIFO_Output(llos_fifo_t *fifo, uint8_t *pData, uint32_t len)
 		LL_LOG_E("%s ", "parameter error!\r\n", __FUNCTION__);
 		return 0;
 	}
-	if(!ready)
+	if(!fifo->ready)
 	{
 		LL_LOG_E("%s ", "not initialized!\r\n", __FUNCTION__);
 		return 0;

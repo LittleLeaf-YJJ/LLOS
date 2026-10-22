@@ -1,8 +1,8 @@
 /*
  * CRC通用驱动。
  * @author LittleLeaf All rights reserved
- * @version V2.0.0
- * @date 2026/06/10
+ * @version V2.0.1
+ * @date 2026/10/11
  */
 #ifndef LLOS_CRC_H
 #define LLOS_CRC_H

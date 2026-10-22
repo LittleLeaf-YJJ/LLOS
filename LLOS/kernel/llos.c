@@ -2,6 +2,8 @@
  * @author LittleLeaf All rights reserved
  */
 #include "llos.h"
+#include <errno.h>
+#include <limits.h>
 
 struct ll_eventCB_list_t
 {
@@ -18,6 +20,7 @@ struct ll_timerCB_list_t
 	ll_newState_t newState;
 	bool isPeriodic;
 	ll_timerCB_t timerCB;
+	uint32_t generation; // 用于识别回调期间是否重新配置了定时器
 };
 struct ll_alarm_list_t
 {
@@ -45,10 +48,11 @@ static struct ll_timerCB_list_t *timerCB_list;
 static struct ll_alarm_list_t *alarm_list;
 static struct ll_device_t *device_list;
 static struct ll_calendar_t ll_calendar;
+static bool ll_calendar_valid;
 
 // CPU占用率统计
-static uint16_t ticksAll = 1;
-static uint16_t ticksBusy;
+static uint64_t ticksAll = 1;
+static uint64_t ticksBusy;
 static uint8_t cpuUsagePercent;
 static volatile uint16_t cpuUsageTick;
 
@@ -59,11 +63,13 @@ static uint32_t ll_coroutine_events;
 
 void LLOS_Coroutine_Register(struct ll_coroutine_ctx_t *ctx, ll_coroutine_CB CB, void *arg)
 {
+    if (ctx == NULL || CB == NULL) return;
     if (ll_coroutine_count < LL_COROUTINES_MAX)
     {
         ll_coroutine_tasks[ll_coroutine_count].ctx = ctx;
         ll_coroutine_tasks[ll_coroutine_count].CB = CB;
         ll_coroutine_tasks[ll_coroutine_count].arg = arg;
+        ll_coroutine_tasks[ll_coroutine_count].pendingEvents = ll_coroutine_events;
         ll_coroutine_count++;
         ctx->state = 0;
     }
@@ -71,16 +77,51 @@ void LLOS_Coroutine_Register(struct ll_coroutine_ctx_t *ctx, ll_coroutine_CB CB,
 void LLOS_Coroutine_SetEvents(uint32_t events)
 {
     ll_coroutine_events |= events;
+    for (uint8_t i = 0; i < ll_coroutine_count; i++)
+        ll_coroutine_tasks[i].pendingEvents |= events;
+}
+void LLOS_Coroutine_ClearEvents(uint32_t events)
+{
+    ll_coroutine_events &= ~events;
+    for (uint8_t i = 0; i < ll_coroutine_count; i++)
+        ll_coroutine_tasks[i].pendingEvents &= ~events;
 }
 uint32_t LLOS_Coroutine_GetEvents(void)
 {
     return ll_coroutine_events;
+}
+bool LLOS_Coroutine_WaitEventReady(struct ll_coroutine_ctx_t *ctx, uint32_t events)
+{
+    if (ctx == NULL || events == 0) return false;
+    for (uint8_t i = 0; i < ll_coroutine_count; i++)
+    {
+        if (ll_coroutine_tasks[i].ctx == ctx)
+        {
+            uint32_t pending = ll_coroutine_tasks[i].pendingEvents;
+            ll_coroutine_tasks[i].pendingEvents &= ~events;
+            return (pending & events) != 0;
+        }
+    }
+    return false;
 }
 #endif
 
 void LLOS_Init(struct ll_init_CBs_t *osCB, struct ll_init_cfgs_t *cfgs)
 {
 	uint32_t size;
+
+	if (osCB == NULL || cfgs == NULL) return;
+	if (cfgs->pPool == NULL || cfgs->poolSize <= sizeof(uint32_t) || (cfgs->poolSize & 3U) != 0 || cfgs->taskNum == 0) return;
+	sysTick = 0;
+	taskIndex = 0;
+	deviceIndex = 0;
+	rtc.sec = 0;
+	ll_calendar = (struct ll_calendar_t){0};
+	ll_calendar_valid = false;
+	ticksAll = 1; ticksBusy = 0; cpuUsageTick = 0; cpuUsagePercent = 0;
+#if LL_COROUTINES_MAX > 0
+	ll_coroutine_count = 0; ll_coroutine_events = 0;
+#endif
 
 	ll_init_CBs.systemReset = osCB->systemReset;
 	ll_init_CBs.DelayMs = osCB->DelayMs;
@@ -98,16 +139,6 @@ void LLOS_Init(struct ll_init_CBs_t *osCB, struct ll_init_cfgs_t *cfgs)
 
 	ll_init_cfgs.pPool = cfgs->pPool;
 	ll_init_cfgs.poolSize = cfgs->poolSize;
-	if (ll_init_cfgs.pPool == NULL)
-	{
-		LL_LOG_E("%s ", "pPool NULL!\r\n", __FUNCTION__);
-		while (1);
-	}
-	if (ll_init_cfgs.poolSize <= sizeof(uint32_t))
-	{
-		LL_LOG_E("%s ", "poolSize <= sizeof(uint32_t)!\r\n", __FUNCTION__);
-		while (1);
-	}
 	memset(ll_init_cfgs.pPool, 0, ll_init_cfgs.poolSize);
 
 	size = sizeof(struct ll_eventCB_list_t) * ll_init_cfgs.taskNum;
@@ -115,7 +146,9 @@ void LLOS_Init(struct ll_init_CBs_t *osCB, struct ll_init_cfgs_t *cfgs)
 	if (eventCB_list == NULL)
 	{
 		LL_LOG_E("%s ", "eventCB list malloc failed!\r\n", __FUNCTION__);
-		while (1);
+		LLOS_ErrorHandler(LL_ERR_OVERFLOW);
+		memset(&ll_init_cfgs, 0, sizeof(ll_init_cfgs));
+		return;
 	}
 	memset(eventCB_list, 0, size);
 
@@ -124,36 +157,44 @@ void LLOS_Init(struct ll_init_CBs_t *osCB, struct ll_init_cfgs_t *cfgs)
 	if (msg_list == NULL)
 	{
 		LL_LOG_E("%s ", "msg list malloc failed!\r\n", __FUNCTION__);
-		while (1);
+		LLOS_ErrorHandler(LL_ERR_OVERFLOW);
+		memset(&ll_init_cfgs, 0, sizeof(ll_init_cfgs));
+		return;
 	}
 	memset(msg_list, 0, size);
 
 	size = sizeof(struct ll_timerCB_list_t) * ll_init_cfgs.timerNum;
-	timerCB_list = LLOS_malloc(size);
+	timerCB_list = ll_init_cfgs.timerNum ? LLOS_malloc(size) : NULL;
 	if (timerCB_list == NULL && ll_init_cfgs.timerNum != 0)
 	{
 		LL_LOG_E("%s ", "timerCB list malloc failed!\r\n", __FUNCTION__);
-		while (1);
+		LLOS_ErrorHandler(LL_ERR_OVERFLOW);
+		memset(&ll_init_cfgs, 0, sizeof(ll_init_cfgs));
+		return;
 	}
-	memset(timerCB_list, 0, size);
+	if (timerCB_list != NULL) memset(timerCB_list, 0, size);
 
 	size = sizeof(struct ll_alarm_list_t) * ll_init_cfgs.alarmNum;
-	alarm_list = LLOS_malloc(size);
+	alarm_list = ll_init_cfgs.alarmNum ? LLOS_malloc(size) : NULL;
 	if (alarm_list == NULL && ll_init_cfgs.alarmNum != 0)
 	{
 		LL_LOG_E("%s ", "alarm list malloc failed!\r\n", __FUNCTION__);
-		while (1);
+		LLOS_ErrorHandler(LL_ERR_OVERFLOW);
+		memset(&ll_init_cfgs, 0, sizeof(ll_init_cfgs));
+		return;
 	}
-	memset(alarm_list, 0, size);
+	if (alarm_list != NULL) memset(alarm_list, 0, size);
 
 	size = sizeof(struct ll_device_t) * ll_init_cfgs.deviceNum;
-	device_list = LLOS_malloc(size);
+	device_list = ll_init_cfgs.deviceNum ? LLOS_malloc(size) : NULL;
 	if (device_list == NULL && ll_init_cfgs.deviceNum != 0)
 	{
 		LL_LOG_E("%s ", "device list malloc failed!\r\n", __FUNCTION__);
-		while (1);
+		LLOS_ErrorHandler(LL_ERR_OVERFLOW);
+		memset(&ll_init_cfgs, 0, sizeof(ll_init_cfgs));
+		return;
 	}
-	memset(device_list, 0, size);
+	if (device_list != NULL) memset(device_list, 0, size);
 
 	LL_LOG_D("", "H  e  l  l  o   --     --  \r\n");
 	LL_LOG_D("", "|      |      |    | |     \r\n");
@@ -184,7 +225,8 @@ ll_taskId_t LLOS_Register_Events(ll_eventCB_t eventCB)
 
 void LLOS_Loop(void)
 {
-	int8_t i, j;
+	int16_t i;
+	int8_t j;
 	ll_taskEvent_t event;
 
 	// CPU统计相关
@@ -196,17 +238,24 @@ void LLOS_Loop(void)
 	{
 		if (eventCB_list[i].eventCB == NULL) continue;
 
-		LL_BIT_SET(eventCB_list[i].oldEvents, eventCB_list[i].newEvents);
+		ll_taskEvent_t pending = eventCB_list[i].newEvents;
 		eventCB_list[i].newEvents = 0;
+		eventCB_list[i].oldEvents |= pending;
 
 		for (j = 31; j >= 0; j--) // 从0x80000000开始保证消息事件的优先级最高
 		{
-			event = LL_BIT_READ(eventCB_list[i].oldEvents, LL_EVENT(j));
+			event = eventCB_list[i].oldEvents & LL_EVENT(j);
 
-			if (event && tempBusy >= eventCB_list[i].startTick[j])
+			ll_tick_t startTick;
+			LLOS_Critical(true);
+			startTick = eventCB_list[i].startTick[j];
+			LLOS_Critical(false);
+			if (event && sysTick >= startTick)
 			{
+				tempBusy = sysTick;
 				if (ll_LP_CB != NULL) ll_LP_CB(i, event, false);
-				eventCB_list[i].oldEvents &= ~eventCB_list[i].eventCB(i, event);
+				ll_taskEvent_t clearEvents = eventCB_list[i].eventCB(i, event);
+				eventCB_list[i].oldEvents &= ~clearEvents;
 				ticksBusy += sysTick - tempBusy;
 				if (ll_LP_CB != NULL) ll_LP_CB(i, event, true);
 			}
@@ -229,7 +278,8 @@ void LLOS_Loop(void)
 	ticksAll += sysTick - tempAll;
 	if(cpuUsageTick > 1000)
 	{
-		cpuUsagePercent = (ticksBusy * 100 + ticksAll / 2) / ticksAll;
+		uint64_t usage = (ticksBusy * 100 + ticksAll / 2) / ticksAll;
+		cpuUsagePercent = (uint8_t)(usage > 100 ? 100 : usage);
 		cpuUsageTick = 0;
 		ticksAll = 1;
 		ticksBusy = 0;
@@ -246,8 +296,7 @@ void LLOS_Start_Event(ll_taskId_t taskId, ll_taskEvent_t events, ll_tick_t tick)
 		return;
 	}
 	
-	LL_BIT_SET(eventCB_list[taskId].newEvents, events);
-
+	LLOS_Critical(true);
 	for (i = 0; i < 32; i++)
 	{
 		if ((events >> i) & 0x00000001)
@@ -255,6 +304,8 @@ void LLOS_Start_Event(ll_taskId_t taskId, ll_taskEvent_t events, ll_tick_t tick)
 			eventCB_list[taskId].startTick[i] = sysTick + tick;
 		}
 	}
+	eventCB_list[taskId].newEvents |= events;
+	LLOS_Critical(false);
 }
 void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
 {
@@ -264,8 +315,10 @@ void LLOS_Stop_Event(ll_taskId_t taskId, ll_taskEvent_t events)
 		return;
 	}
 
-	LL_BIT_CLEAR(eventCB_list[taskId].newEvents, events);
-	LL_BIT_CLEAR(eventCB_list[taskId].oldEvents, events);
+	LLOS_Critical(true);
+	eventCB_list[taskId].newEvents &= ~events;
+	eventCB_list[taskId].oldEvents &= ~events;
+	LLOS_Critical(false);
 }
 
 uint8_t LLOS_Get_TaskNum(void)
@@ -276,7 +329,9 @@ uint64_t LLOS_Get_SysTick(void)
 {
 	uint64_t tick;
 
+	LLOS_Critical(true);
     tick = sysTick;
+	LLOS_Critical(false);
 
 	return tick;
 }
@@ -306,11 +361,15 @@ void LLOS_Tick_Increase(void)
 		
 		for (i = 0; i < ll_init_cfgs.alarmNum; i++)
 		{
+			ll_alarmCB_t cb = NULL;
+			LLOS_Critical(true);
 			if (rtc.sec >= alarm_list[i].sec && alarm_list[i].CB != NULL)
 			{
-				alarm_list[i].CB(i);
+				cb = alarm_list[i].CB;
 				alarm_list[i].CB = NULL;
 			}
+			LLOS_Critical(false);
+			if (cb != NULL) cb(i);
 		}
 	}
 
@@ -319,13 +378,28 @@ void LLOS_Tick_Increase(void)
 	{
 		for (i = 0; i < ll_init_cfgs.timerNum; i++)
 		{
+			ll_timerCB_t cb = NULL;
+			bool periodic = false;
+			uint32_t generation = 0;
+			LLOS_Critical(true);
 			if (timerCB_list[i].newState && timerCB_list[i].timerCB != NULL && sysTick >= timerCB_list[i].nextTick)
 			{
-				timerCB_list[i].timerCB(i);
-				if (timerCB_list[i].isPeriodic == false)
-					timerCB_list[i].newState = ll_disable;
-				else
+				cb = timerCB_list[i].timerCB;
+				periodic = timerCB_list[i].isPeriodic;
+				generation = timerCB_list[i].generation;
+				timerCB_list[i].newState = ll_disable;
+			}
+			LLOS_Critical(false);
+			if (cb != NULL)
+			{
+				cb(i);
+				LLOS_Critical(true);
+				if (timerCB_list[i].generation == generation && periodic)
+				{
+					timerCB_list[i].newState = ll_enable;
 					timerCB_list[i].nextTick = sysTick + timerCB_list[i].tick;
+				}
+				LLOS_Critical(false);
 			}
 		}
 	}
@@ -347,9 +421,8 @@ ll_err_t LLOS_Msg_Send(ll_taskId_t taskId, const void *pMsg)
 }
 const void *LLOS_Msg_Receive(ll_taskId_t taskId)
 {
-    const void *msg;
-    msg = msg_list[taskId];
-	return msg;
+    if (taskId >= ll_init_cfgs.taskNum || msg_list == NULL) return NULL;
+    return msg_list[taskId];
 }
 ll_err_t LLOS_Msg_Clear(ll_taskId_t taskId)
 {
@@ -395,12 +468,15 @@ ll_err_t LLOS_Timer_Set(uint8_t timerN, ll_newState_t newState, bool isPeriodic,
 	}
 	if (tick == 0) return LL_ERR_PARA;
 
+	LLOS_Critical(true);
 	timerCB_list[timerN].initTick = sysTick;
 	timerCB_list[timerN].newState = newState;
 	timerCB_list[timerN].isPeriodic = isPeriodic;
 	timerCB_list[timerN].tick = tick;
 	timerCB_list[timerN].timerCB = timerCB;
 	timerCB_list[timerN].nextTick = sysTick + tick;
+	timerCB_list[timerN].generation++; // 每次配置递增代数，识别回调内重配置
+	LLOS_Critical(false);
 
 	return LL_ERR_SUCCESS;
 }
@@ -410,14 +486,14 @@ static const uint8_t table_mon[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30
 
 static bool RTC_Is_Leap_Year(uint16_t year);
 static uint8_t RTC_Get_Week(uint16_t year, uint8_t month, uint8_t day);
+static bool RTC_Is_Valid_Date(uint16_t year, uint8_t mon, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec);
 
 ll_err_t LLOS_RTC_SetDate(uint16_t year, uint8_t mon, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec)
 {
 	uint16_t t;
 	uint32_t toSec = 0;
 
-	if (year < 2000 || year > 2099)
-		return LL_ERR_PARA;
+	if (!RTC_Is_Valid_Date(year, mon, day, hour, min, sec)) return LL_ERR_PARA;
 	for (t = 2000; t < year; t++)
 	{
 		if (RTC_Is_Leap_Year(t))
@@ -445,14 +521,15 @@ ll_err_t LLOS_RTC_SetDate(uint16_t year, uint8_t mon, uint8_t day, uint8_t hour,
 }
 void LLOS_RTC_GetDate(struct ll_calendar_t *calenda)
 {
-	static uint16_t daycnt = 0;
+	static uint32_t daycnt = 0; // 使用无效标志区分初始第 0 天
 	uint32_t temp = 0;
+	if (calenda == NULL) return;
 	uint16_t temp1 = 0;
 	uint32_t toTime = rtc.sec;
 
 	temp = toTime / 86400; // 计算出天数
 
-	if (daycnt != temp) // 如果天数已更新
+	if (!ll_calendar_valid || daycnt != temp) // 首次读取也必须计算 2000-01-01
 	{
 		daycnt = temp;
 		temp1 = 2000;
@@ -495,6 +572,7 @@ void LLOS_RTC_GetDate(struct ll_calendar_t *calenda)
 
 		ll_calendar.mon = temp1 + 1;
 		ll_calendar.day = temp + 1;
+		ll_calendar_valid = true;
 	}
 
 	toTime %= 86400;
@@ -519,8 +597,7 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 		return LL_ERR_INVALID;
 	}
 
-	if (year < 2000 || year > 2099)
-		return LL_ERR_PARA;
+	if (!RTC_Is_Valid_Date(year, mon, day, hour, min, sec)) return LL_ERR_PARA;
 	for (t = 2000; t < year; t++)
 	{
 		if (RTC_Is_Leap_Year(t))
@@ -542,14 +619,17 @@ ll_err_t LLOS_RTC_SetAlarm(uint16_t year, uint8_t mon, uint8_t day,
 	toSec += min * 60;
 	toSec += sec;
 
+	LLOS_Critical(true);
 	alarm_list[alarmN].sec = toSec;
 	alarm_list[alarmN].CB = alarmCB;
+	LLOS_Critical(false);
 
 	return LL_ERR_SUCCESS;
 }
 
 static uint8_t RTC_Get_Week(uint16_t year, uint8_t month, uint8_t day)
 {
+	if (month < 1 || month > 12) return 0;
 	/* 蔡勒公式 */
 	uint16_t temp;
 	uint8_t yearH, yearL;
@@ -570,117 +650,115 @@ static bool RTC_Is_Leap_Year(uint16_t year)
 {
 	return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
 }
+static bool RTC_Is_Valid_Date(uint16_t year, uint8_t mon, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec)
+{
+	if (year < 2000 || year > 2099 || mon < 1 || mon > 12 || hour > 23 || min > 59 || sec > 59) return false;
+	uint8_t maxDay = table_mon[mon - 1];
+	if (mon == 2 && RTC_Is_Leap_Year(year)) maxDay = 29;
+	return day >= 1 && day <= maxDay;
+}
 
 void *LLOS_malloc(size_t size)
 {
-	uint32_t *head; // 表头格式为0xcdxxxxac，xxxx代表已经被分配的内存长度
-	uint32_t *nextHead;
-	size_t i, s;
+	if (ll_init_cfgs.pPool == NULL || ll_init_cfgs.poolSize < sizeof(uint32_t) * 2) return NULL;
+	uint32_t *head = ll_init_cfgs.pPool; // 从内存池起点扫描
+	uint32_t *end = head + (ll_init_cfgs.poolSize >> 2); // 计算池尾地址
+	if (size > SIZE_MAX - 3) return NULL;
+	size_t words = (size + 3) / 4; // 将申请大小向上取整到字
+	size_t total = words + 1; // 额外预留块头
 
-	if (size > ll_init_cfgs.poolSize || size < 1)
-		return NULL;
-
-	head = ll_init_cfgs.pPool;
-	s = (size + 3) / 4;
-
-	do
+	if (head == NULL || size == 0 || total > (size_t)(end - head) || words > 0xFFFF) return NULL; // 同时校验块头和数据区边界
+	while (head + total <= end)
 	{
-		if ((head + s) > ll_init_cfgs.pPool + (ll_init_cfgs.poolSize >> 2)) // 内存不足，分配失败
+		if ((head[0] >> 24) == 0xcd && (head[0] & 0xff) == 0xac)
 		{
-			return NULL;
-			//			break;
+			size_t block = (head[0] >> 8) & 0xffff; // 读取已分配块长度
+			if (block == 0 || head + block + 1 > end) return NULL; // 检测损坏的块头
+			head += block + 1; // 跳过已分配块
+			continue;
 		}
-		if ((head[0] >> 24) == 0xcd && (head[0] & 0xff) == 0xac) // 内存已被使用
+		uint32_t *next = head + 1; // 检查候选空闲区域内是否遇到下一个块
+		while (next < head + total && next < end)
 		{
-			head += ((head[0] >> 8) & 0xffff) + 1;
+			if ((next[0] >> 24) == 0xcd && (next[0] & 0xff) == 0xac) break;
+			next++;
 		}
-		else // 内存没有被使用
-		{
-			nextHead = head + 1;
-			for (i = 0; i < s; i++)
-			{
-				// 寻找下一个表头
-				if ((nextHead[0] >> 24) == 0xcd && (nextHead[0] & 0xff) == 0xac)
-				{
-					head = nextHead;
-					break;
-				}
-				else
-				{
-					nextHead++;
-				}
-			}
-			if (i >= s)
-				break; // 找到足够大的未被分配的空间
-		}
-	} while (1);
-
-	head[0] = (0xcd0000ac | (s << 8));
-
+		if (next == head + total) break; // 找到足够大的空闲区域
+		head = next; // 从下一个已分配块继续扫描
+	}
+	if (head + total > end) return NULL; // 最终防止块头或 payload 越界
+	head[0] = (uint32_t)(0xcd0000ac | (words << 8)); // 写入块头
 	return (void *)(head + 1);
 }
 void LLOS_free(void *p)
 {
 	uint32_t *head;
-    uint16_t i, size;
-    uint32_t *pool_start = ll_init_cfgs.pPool;
-    uint32_t *pool_end = pool_start + (ll_init_cfgs.poolSize >> 2);
+	uint32_t *scan; // 用于确认待释放指针对应真实块起点
+    size_t i, size; // 支持按 size_t 校验块边界
+    if (ll_init_cfgs.pPool == NULL || ll_init_cfgs.poolSize < sizeof(uint32_t) * 2) return; // 防止未初始化时释放内存
+    uint32_t *pool_start = ll_init_cfgs.pPool; // 记录内存池起点
+    uint32_t *pool_end = pool_start + (ll_init_cfgs.poolSize >> 2); // 记录内存池终点
 
-    if (p == NULL)
+	if (p == NULL)
 	{
 		LL_LOG_E("%s ", "parameter NULL!\r\n", __FUNCTION__);
 		return;
 	}
 
+	if (((uintptr_t)p & (sizeof(uint32_t) - 1U)) != 0U || // 拒绝未对齐指针
+		(uintptr_t)p < (uintptr_t)(pool_start + 1) || // 排除内存池头部地址
+		(uintptr_t)p >= (uintptr_t)pool_end) // 排除内存池尾部之外地址
+	{
+		LL_LOG_E("%s ", "parameter Invalid!\r\n", __FUNCTION__);
+		return;
+	}
+
     head = (uint32_t *)p - 1;
 
-    if ((uint32_t *)head < pool_start || (uint32_t *)head >= pool_end)
-	{
-        LL_LOG_E("%s ", "parameter Invalid!\r\n", __FUNCTION__);
-        return;
-    }
-
-    if (((head[0] >> 24) == 0xcd) && ((head[0] & 0xff) == 0xac))
-	{
-        size = (head[0] >> 8) & 0xffff;
-
-        if (head + size + 1 > pool_end)
-		{
-            LL_LOG_E("%s ", "parameter VERIFY!\r\n", __FUNCTION__);
-            return;
+	scan = pool_start; // 从内存池起点扫描已分配块
+	while (scan < pool_end) // 遍历内存池块表
+    {
+		if ((scan[0] >> 24) == 0xcd && (scan[0] & 0xff) == 0xac) // 识别已分配块头
+        {
+			size = (scan[0] >> 8) & 0xffff; // 读取当前块长度
+			if (size == 0 || scan + size + 1 > pool_end) // 校验块边界
+            {
+                LL_LOG_E("%s ", "parameter VERIFY!\r\n", __FUNCTION__);
+                return;
+            }
+			if (scan == head) // 仅释放精确匹配的块起点
+            {
+				for (i = 0; i <= size; i++) // 清除整个块
+				scan[i] = 0; // 清除块头和数据
+				return; // 完成释放
+            }
+			scan += size + 1; // 跳过当前已分配块
         }
-
-        for (i = 0; i <= size; i++)
-            head[i] = 0;
+        else
+        {
+			scan++; // 继续扫描空闲区域
+        }
     }
-    // 魔数不匹配：可能是重复释放或非法指针，可选择忽略或报错
-    else
-	{
-        LL_LOG_E("%s ", "parameter VERIFY!\r\n", __FUNCTION__);
-    }
+	LL_LOG_E("%s ", "parameter VERIFY!\r\n", __FUNCTION__); // 拒绝非块起点指针
 }
 uint16_t LLOS_Pool_GetUsedSize(void)
 {
-	uint32_t *head; // 表头指针
-	uint32_t *end;	// 内存池末尾
-
-	head = ll_init_cfgs.pPool;								 // 内存池起始位置
-	end = ll_init_cfgs.pPool + (ll_init_cfgs.poolSize >> 2); // 内存池末尾位置
-
+	if (ll_init_cfgs.pPool == NULL || ll_init_cfgs.poolSize < sizeof(uint32_t) * 2) return 0;
+	uint32_t *head = ll_init_cfgs.pPool; // 从池起点扫描所有块
+	uint32_t *end = head + (ll_init_cfgs.poolSize >> 2); // 计算池尾地址
+	size_t used = 0; // 累加所有已分配块的头和数据区
 	while (head < end)
 	{
-		if ((head[0] >> 24) == 0xcd && (head[0] & 0xff) == 0xac) // 表头标记为已分配内存
+		if ((head[0] >> 24) == 0xcd && (head[0] & 0xff) == 0xac)
 		{
-			uint16_t blockSize = (head[0] >> 8) & 0xffff; // 获取已分配的内存块大小
-			head += blockSize + 1;						  // 跳过当前已分配的内存块
+			size_t block = (head[0] >> 8) & 0xffff; // 读取已分配块大小
+			if (block == 0 || head + block + 1 > end) break; // 检测损坏块头
+			used += block + 1; // 空闲块前后的已分配块都计入统计
+			head += block + 1;
 		}
-		else
-		{
-			break;
-		}
+		else head++; // 跳过空闲字，继续查找后续块
 	}
-
-	return head - ll_init_cfgs.pPool;
+	return used > UINT16_MAX ? UINT16_MAX : (uint16_t)used; // 防止返回值溢出
 }
 
 void LLOS_ErrorHandler(uint8_t errCode)
@@ -757,6 +835,7 @@ uint8_t LLOS_Device_GetNum(void)
 
 struct ll_device_t *LLOS_Device_Find(const char *name)
 {
+	if (name == NULL || device_list == NULL) return NULL;
 	for (ll_deviceId_t i = 0; i < ll_init_cfgs.deviceNum; i++)
 	{
 		if (device_list[i].name != NULL && strcmp(name, device_list[i].name) == 0)
@@ -802,8 +881,9 @@ ll_err_t LLOS_Device_Open(struct ll_device_t *dev, uint32_t cmd)
 		LL_LOG_E("%s ", "parameter NULL!\r\n", __FUNCTION__);
 		return LL_ERR_NULL;
 	}
-	dev->isOpen = true;
-	return dev->ops->openCB(dev, cmd);
+	ll_err_t err = dev->ops->openCB(dev, cmd);
+	if (err == LL_ERR_SUCCESS) dev->isOpen = true;
+	return err;
 }
 ll_err_t LLOS_Device_Close(struct ll_device_t *dev)
 {
@@ -812,8 +892,9 @@ ll_err_t LLOS_Device_Close(struct ll_device_t *dev)
 		LL_LOG_E("%s ", "parameter NULL!\r\n", __FUNCTION__);
 		return LL_ERR_NULL;
 	}
-	dev->isOpen = false;
-	return dev->ops->closeCB(dev);
+	ll_err_t err = dev->ops->closeCB(dev);
+	if (err == LL_ERR_SUCCESS) dev->isOpen = false;
+	return err;
 }
 ll_err_t LLOS_Device_Read(struct ll_device_t *dev, uint32_t address, uint32_t offset, void *buffer, uint32_t len)
 {
@@ -966,11 +1047,13 @@ static bool convert_unit(double *value, char **endptr)
 
 ll_err_t LLOS_Cmd_IDN(ll_cmd_t *context)
 {
+	LL_UNUSED(context);
 	ll_cmd_printf("%s,%s,%s,%s\r\n", pvid, ppid, pversion, psn);
 	return LL_ERR_SUCCESS;
 }
 ll_err_t LLOS_Cmd_RST(ll_cmd_t *context)
 {
+	LL_UNUSED(context);
 	LLOS_System_Reset();
 	return LL_ERR_SUCCESS;
 }
@@ -989,16 +1072,17 @@ void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const cha
 {
 	uint32_t size;
 
-	pvid = vid;
-	ppid = pid;
-	pversion = version;
-	psn = sn;
+	pvid = vid != NULL ? vid : "";
+	ppid = pid != NULL ? pid : "";
+	pversion = version != NULL ? version : "";
+	psn = sn != NULL ? sn : "";
 
 	ll_cmd_bufSize = bufSize;
 	if (ll_cmd_bufSize <= sizeof(char))
 	{
 		LL_LOG_E("%s ", "bufSize <= sizeof(char)!", __FUNCTION__);
-		while (1);
+		ll_cmd_bufSize = 0;
+		return;
 	}
 
 	size = sizeof(char) * bufSize;
@@ -1006,7 +1090,9 @@ void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const cha
 	if (context.buffer == NULL)
 	{
 		LL_LOG_E("%s ", "context.buffer malloc failed!\r\n", __FUNCTION__);
-		while (1);
+		LL_LOG_E("%s ", "command parser disabled!\r\n", __FUNCTION__);
+		ll_cmd_bufSize = 0;
+		return;
 	}
 	context.buffer[0] = '\0';
 
@@ -1017,11 +1103,13 @@ void LLOS_Cmd_Init(uint16_t bufSize, const char *vid, const char *pid, const cha
 
 bool LLOS_Cmd_Input(const char *data, uint32_t len)
 {
+	if (data == NULL || ll_cmd_bufSize == 0 || context.buffer == NULL) return false;
 	for (int i = 0; cmdList[i].callback != NULL; i++)
 	{
 		uint32_t patternLen = strlen(cmdList[i].pattern);
 		
-		if (len >= patternLen && strncasecmp(cmdList[i].pattern, data, patternLen) == 0)
+		if (len >= patternLen && strncasecmp(cmdList[i].pattern, data, patternLen) == 0 &&
+			(patternLen == len || data[patternLen] == ' ' || data[patternLen] == '\t' || data[patternLen] == ',' || data[patternLen] == '\r' || data[patternLen] == '\n'))
 		{
 			context.len = len - patternLen; // 获取除去指令后字符串数据长度
 			if (context.len >= ll_cmd_bufSize) context.len = ll_cmd_bufSize - 1;  // 留出结尾
@@ -1073,6 +1161,7 @@ ll_err_t LLOS_Cmd_ParamBool(ll_cmd_t *context, bool *val)
 	endptr = context->buffer;
 
 	Trim(context->buffer);
+	endptr = context->buffer;
 
 	if (*context->buffer == '\0')
 	{
@@ -1115,6 +1204,7 @@ ll_err_t LLOS_Cmd_ParamBool(ll_cmd_t *context, bool *val)
 	return LL_ERR_FAILED;
 
 label:
+	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t') return LL_ERR_FAILED;
 	memmove(context->buffer, endptr, strlen(endptr) + 1);
 	return LL_ERR_SUCCESS;
 }
@@ -1128,6 +1218,7 @@ ll_err_t LLOS_Cmd_ParamFloat(ll_cmd_t *context, float *val)
 
 	double temp;
 	char *endptr;
+	errno = 0;
 
 	Trim(context->buffer);
 
@@ -1139,7 +1230,7 @@ ll_err_t LLOS_Cmd_ParamFloat(ll_cmd_t *context, float *val)
 
 	temp = strtof(context->buffer, &endptr);
 
-	if (endptr == context->buffer)
+	if (endptr == context->buffer || errno == ERANGE)
 	{
 		LL_LOG_E("%s ", "failed!\r\n", __FUNCTION__);
 		return LL_ERR_FAILED;
@@ -1147,6 +1238,7 @@ ll_err_t LLOS_Cmd_ParamFloat(ll_cmd_t *context, float *val)
 
 	convert_unit(&temp, &endptr);
 
+	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t') return LL_ERR_FAILED;
 	memmove(context->buffer, endptr, strlen(endptr) + 1);
 
 	*val = temp;
@@ -1161,8 +1253,9 @@ ll_err_t LLOS_Cmd_ParamInt32(ll_cmd_t *context, int32_t *val)
 		return LL_ERR_NULL;
 	}
 
-	int32_t temp;
+	long parsed;
 	char *endptr;
+	errno = 0;
 
 	Trim(context->buffer);
 
@@ -1172,20 +1265,22 @@ ll_err_t LLOS_Cmd_ParamInt32(ll_cmd_t *context, int32_t *val)
 		return LL_ERR_FAILED;
 	}
 
-	temp = strtol(context->buffer, &endptr, 10);
+	parsed = strtol(context->buffer, &endptr, 10);
 
-	if (endptr == context->buffer)
+	if (endptr == context->buffer || errno == ERANGE || parsed < INT32_MIN || parsed > INT32_MAX)
 	{
 		LL_LOG_E("%s ", "failed!\r\n", __FUNCTION__);
 		return LL_ERR_FAILED;
 	}
 
-	double ftemp = temp;
+	double ftemp = (double)parsed;
 	convert_unit(&ftemp, &endptr);
 
+	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t') return LL_ERR_FAILED;
+	if (ftemp < INT32_MIN || ftemp > INT32_MAX) return LL_ERR_PARA;
 	memmove(context->buffer, endptr, strlen(endptr) + 1);
 
-	*val = ftemp;
+	*val = (int32_t)ftemp;
 
 	return LL_ERR_SUCCESS;
 }
@@ -1220,12 +1315,13 @@ ll_err_t LLOS_Cmd_ParamCopyText(ll_cmd_t *context, char *text, uint32_t copyLen)
 	}
 
 	uint32_t textLen = (uint32_t)(end - start);
-
-	LL_LIMIT_MAX(textLen, context->len);
-	LL_LIMIT_MAX(textLen, copyLen);
-
+	if (textLen > copyLen) textLen = copyLen;
 	strncpy(text, start, textLen);
 	text[textLen] = '\0';
+	char *next = end + 1;
+	uint32_t consumed = (uint32_t)(next - context->buffer);
+	memmove(context->buffer, next, strlen(next) + 1);
+	context->len = context->len > consumed ? context->len - consumed : 0;
 
 	return LL_ERR_SUCCESS;
 }
@@ -1249,6 +1345,6 @@ void LLOS_Cmd_ResultUInt32(uint32_t val)
 }
 void LLOS_Cmd_ResultText(char *val)
 {
-	ll_cmd_printf("%s\r\n", val);
+	ll_cmd_printf("%s\r\n", val != NULL ? val : "");
 }
 #endif

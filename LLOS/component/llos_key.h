@@ -2,8 +2,8 @@
  * 独立按键驱动，支持无阻塞的任意按键点击次数、长按及长按时间检测， 支持按下/弹起双状态和多按键
  * 同时检测，低电平有效。
  * @author LittleLeaf All rights reserved
- * @version V3.0.0
- * @date 2026/06/10
+ * @version V3.0.1
+ * @date 2026/10/11
  * 基础使用步骤:
  * 1) 初始化调用LLOS_Key_Init
  * 2) 在回调函数里读取回调函数传入的按键信息
@@ -23,17 +23,14 @@ extern "C"
 
 #if LL_KEY_USE_LLOS
 #define LL_KEY_MALLOC 					LLOS_malloc
+#define LL_KEY_FREE						LLOS_free
 #define ENTER_CRITICAL()				LLOS_Critical(1)
 #define EXIT_CRITICAL()					LLOS_Critical(0)
 #else
-#ifndef ENTER_CRITICAL()
-    #error "ENTER_CRITICAL not defined! Please define it (e.g., __disable_irq()) before including this header!"
-#endif
-#ifndef EXIT_CRITICAL()
-    #error "EXIT_CRITICAL not defined! Please define it (e.g., __enable_irq()) before including this header!"
-#endif
-
 #define LL_KEY_MALLOC 					malloc
+#define LL_KEY_FREE						free
+#define ENTER_CRITICAL()				do { } while (0)
+#define EXIT_CRITICAL()					do { } while (0)
 #endif
 
 enum ll_keyEvent_t
@@ -47,7 +44,7 @@ enum ll_keyEvent_t
 
 struct ll_keyConfig_t
 {
-	ll_IO_t port;	  			/* GPIO存储引脚输入状态的寄存器地址 */
+	uintptr_t port; 			/* GPIO存储引脚输入状态的寄存器地址 */
 	uint32_t pinMask; 			/* 使用到的Pin掩码 */
 };
 
