@@ -1,6 +1,6 @@
 # LLOS 修改日志
 
-## 2026-11-26
+## V3.1.1 (2026-11-26)
 
 ### kernel/llos.c
 
@@ -17,3 +17,7 @@
    - 原实现：`extern struct cmdList_t cmdList[];`，要求使用方必须提供强定义
    - 修改：`__attribute__((weak)) struct cmdList_t cmdList[] = { {"", NULL} };`
    - 使用方可定义同名强符号覆盖；未定义时使用空表兜底，不会链接失败
+
+4. 参数解析兼容 `\r\n` 结尾
+   - `LLOS_Cmd_ParamBool` / `LLOS_Cmd_ParamFloat` / `LLOS_Cmd_ParamInt32` 的结尾检查增加 `\r` 和 `\n`
+   - 串口命令以 `\r\n` 结尾时，参数末尾的 `\r` 曾被判定为非法字符，导致返回 `LL_ERR_FAILED`

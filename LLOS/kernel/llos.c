@@ -1208,7 +1208,7 @@ ll_err_t LLOS_Cmd_ParamBool(ll_cmd_t *context, bool *val)
 	return LL_ERR_FAILED;
 
 label:
-	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t') return LL_ERR_FAILED;
+	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t' && *endptr != '\r' && *endptr != '\n') return LL_ERR_FAILED;
 	memmove(context->buffer, endptr, strlen(endptr) + 1);
 	return LL_ERR_SUCCESS;
 }
@@ -1242,7 +1242,7 @@ ll_err_t LLOS_Cmd_ParamFloat(ll_cmd_t *context, float *val)
 
 	convert_unit(&temp, &endptr);
 
-	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t') return LL_ERR_FAILED;
+	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t' && *endptr != '\r' && *endptr != '\n') return LL_ERR_FAILED;
 	memmove(context->buffer, endptr, strlen(endptr) + 1);
 
 	*val = temp;
@@ -1280,7 +1280,7 @@ ll_err_t LLOS_Cmd_ParamInt32(ll_cmd_t *context, int32_t *val)
 	double ftemp = (double)parsed;
 	convert_unit(&ftemp, &endptr);
 
-	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t') return LL_ERR_FAILED;
+	if (*endptr != '\0' && *endptr != ' ' && *endptr != ',' && *endptr != '\t' && *endptr != '\r' && *endptr != '\n') return LL_ERR_FAILED;
 	if (ftemp < INT32_MIN || ftemp > INT32_MAX) return LL_ERR_PARA;
 	memmove(context->buffer, endptr, strlen(endptr) + 1);
 
