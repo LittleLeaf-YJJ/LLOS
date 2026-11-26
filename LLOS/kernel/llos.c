@@ -130,8 +130,6 @@ void LLOS_Init(struct ll_init_CBs_t *osCB, struct ll_init_cfgs_t *cfgs)
 	ll_init_CBs.criticalEnter = osCB->criticalEnter;
 	ll_init_CBs.criticalEXIT = osCB->criticalEXIT;
 
-	ll_init_cfgs.TIMER_EN = cfgs->TIMER_EN;
-	ll_init_cfgs.RTC_EN = cfgs->RTC_EN;
 	ll_init_cfgs.taskNum = cfgs->taskNum;
 	ll_init_cfgs.timerNum = cfgs->timerNum;
 	ll_init_cfgs.alarmNum = cfgs->alarmNum;
@@ -195,6 +193,9 @@ void LLOS_Init(struct ll_init_CBs_t *osCB, struct ll_init_cfgs_t *cfgs)
 		return;
 	}
 	if (device_list != NULL) memset(device_list, 0, size);
+
+	ll_init_cfgs.TIMER_EN = cfgs->TIMER_EN;
+	ll_init_cfgs.RTC_EN = cfgs->RTC_EN;
 
 	LL_LOG_D("", "H  e  l  l  o   --     --  \r\n");
 	LL_LOG_D("", "|      |      |    | |     \r\n");
@@ -354,7 +355,7 @@ void LLOS_Tick_Increase(void)
 	// RTC
 	static uint16_t rtc_counter = 0;
 	rtc_counter++;
-	if (ll_init_cfgs.RTC_EN && rtc_counter >= (1000 / tickPeriod))
+	if (ll_init_cfgs.RTC_EN && alarm_list != NULL && rtc_counter >= (1000 / tickPeriod))
 	{
 		rtc_counter = 0;
 		rtc.sec++;
@@ -374,7 +375,7 @@ void LLOS_Tick_Increase(void)
 	}
 
 	// timer
-	if (ll_init_cfgs.TIMER_EN)
+	if (ll_init_cfgs.TIMER_EN && timerCB_list != NULL)
 	{
 		for (i = 0; i < ll_init_cfgs.timerNum; i++)
 		{
@@ -1058,7 +1059,10 @@ ll_err_t LLOS_Cmd_RST(ll_cmd_t *context)
 	return LL_ERR_SUCCESS;
 }
 
-extern struct cmdList_t cmdList[];
+__attribute__((weak)) struct cmdList_t cmdList[] =
+{
+	{"", NULL},
+};
 
 static int compare(const void *a, const void *b)
 {
